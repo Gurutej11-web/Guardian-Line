@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
+import { Reveal } from "@/components/Reveal";
+import { AnimatedCounter } from "@/components/AnimatedCounter";
 import {
   AlertIcon,
   CheckIcon,
@@ -14,9 +16,21 @@ import {
 } from "@/components/icons";
 
 const stats = [
-  { value: "3–10s", label: { en: "of sample audio needed to clone a voice", es: "de audio necesarios para clonar una voz" } },
-  { value: "$1B+", label: { en: "in reported losses annually to imposter scams", es: "en pérdidas reportadas anualmente por estafas de suplantación" } },
-  { value: "0", label: { en: "mainstream tools that catch this live, during the call", es: "herramientas comunes que lo detectan en vivo, durante la llamada" } },
+  {
+    target: 10,
+    format: (n: number) => `3–${n}s`,
+    label: { en: "of sample audio needed to clone a voice", es: "de audio necesarios para clonar una voz" },
+  },
+  {
+    target: 1,
+    format: (n: number) => `$${n}B+`,
+    label: { en: "in reported losses annually to imposter scams", es: "en pérdidas reportadas anualmente por estafas de suplantación" },
+  },
+  {
+    target: 0,
+    format: (n: number) => `${n}`,
+    label: { en: "mainstream tools that catch this live, during the call", es: "herramientas comunes que lo detectan en vivo, durante la llamada" },
+  },
 ];
 
 const features = [
@@ -77,35 +91,51 @@ export default function Home() {
   return (
     <div className="flex flex-col">
       <section className="relative overflow-hidden border-b border-border-subtle">
-        <div className="absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_top,_var(--accent-dim)_0%,_transparent_60%)] opacity-30" />
+        <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--accent-dim)_0%,_transparent_60%)] opacity-30" />
+          <div className="animate-float-blob absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
+          <div className="animate-float-blob-slow absolute top-32 right-1/5 h-80 w-80 rounded-full bg-trust-safe/10 blur-3xl" />
+        </div>
         <div className="mx-auto max-w-6xl px-5 pt-20 pb-24 sm:pt-28 sm:pb-32">
           <div className="mx-auto max-w-3xl text-center">
-            <span className="inline-flex items-center gap-2 rounded-full border border-border-subtle bg-background-elevated px-3.5 py-1 text-xs font-medium text-foreground-muted">
-              <ShieldIcon className="h-3.5 w-3.5 text-accent" />
-              Lumora Hacks Summer 2026
+            <span className="animate-fade-in-up inline-flex items-center gap-2 rounded-full border border-border-subtle bg-background-elevated px-3.5 py-1 text-xs font-medium text-foreground-muted">
+              <span className="relative flex h-2 w-2">
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-trust-safe opacity-60" />
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-trust-safe" />
+              </span>
+              {lang === "en" ? "Real-time protection · runs entirely on-device" : "Protección en tiempo real · todo en el dispositivo"}
             </span>
-            <h1 className="mt-6 text-4xl font-semibold tracking-tight sm:text-6xl">
+            <h1
+              className="animate-fade-in-up mt-6 text-4xl font-semibold tracking-tight sm:text-6xl"
+              style={{ animationDelay: "80ms" }}
+            >
               {lang === "en" ? (
                 <>Know it&apos;s them.<br />Before you send the money.</>
               ) : (
                 <>Sabe que es él.<br />Antes de enviar el dinero.</>
               )}
             </h1>
-            <p className="mt-6 text-lg leading-relaxed text-foreground-muted">
+            <p
+              className="animate-fade-in-up mt-6 text-lg leading-relaxed text-foreground-muted"
+              style={{ animationDelay: "160ms" }}
+            >
               {lang === "en"
                 ? "Guardian Line listens alongside your phone calls in real time and warns you the moment a voice sounds cloned or a conversation turns into a scam."
                 : "Guardian Line escucha junto a tus llamadas en tiempo real y te avisa en el momento en que una voz suena clonada o una conversación se convierte en una estafa."}
             </p>
-            <div className="mt-9 flex flex-col sm:flex-row items-center justify-center gap-3">
+            <div
+              className="animate-fade-in-up mt-9 flex flex-col sm:flex-row items-center justify-center gap-3"
+              style={{ animationDelay: "240ms" }}
+            >
               <Link
                 href="/dashboard"
-                className="w-full sm:w-auto rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-dim transition-colors"
+                className="btn-press w-full sm:w-auto rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
               >
                 {lang === "en" ? "Open Live Monitor" : "Abrir monitor en vivo"}
               </Link>
               <Link
                 href="/demo"
-                className="w-full sm:w-auto rounded-full border border-border-strong px-6 py-3 text-sm font-semibold text-foreground hover:bg-background-elevated transition-colors"
+                className="btn-press w-full sm:w-auto rounded-full border border-border-strong px-6 py-3 text-sm font-semibold text-foreground hover:bg-background-elevated"
               >
                 {lang === "en" ? "See the voice demo" : "Ver la demo de voz"}
               </Link>
@@ -113,21 +143,22 @@ export default function Home() {
           </div>
 
           <div className="mt-20 grid grid-cols-1 gap-6 sm:grid-cols-3">
-            {stats.map((s) => (
-              <div
-                key={s.value}
-                className="rounded-2xl border border-border-subtle bg-background-card px-6 py-8 text-center"
-              >
-                <div className="text-3xl font-bold text-accent">{s.value}</div>
-                <div className="mt-2 text-sm text-foreground-muted">{s.label[lang]}</div>
-              </div>
+            {stats.map((s, i) => (
+              <Reveal key={s.label.en} delayMs={i * 100}>
+                <div className="card-hover rounded-2xl border border-border-subtle bg-background-card px-6 py-8 text-center">
+                  <div className="text-3xl font-bold text-accent tabular-nums">
+                    <AnimatedCounter target={s.target} format={s.format} />
+                  </div>
+                  <div className="mt-2 text-sm text-foreground-muted">{s.label[lang]}</div>
+                </div>
+              </Reveal>
             ))}
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-20">
-        <div className="mx-auto max-w-2xl text-center">
+        <Reveal className="mx-auto max-w-2xl text-center">
           <h2 className="text-3xl font-semibold tracking-tight">
             {lang === "en" ? "Two signals. One calm answer." : "Dos señales. Una respuesta tranquila."}
           </h2>
@@ -136,20 +167,19 @@ export default function Home() {
               ? "Voice forensics and conversation analysis are fused into a single, explainable Trust Meter — either signal can raise a flag, both together escalate it."
               : "El análisis de voz y de la conversación se combinan en un solo medidor de confianza explicable — cualquiera de las señales puede alertar, ambas juntas lo escalan."}
           </p>
-        </div>
+        </Reveal>
 
         <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f) => (
-            <div
-              key={f.title.en}
-              className="rounded-2xl border border-border-subtle bg-background-card p-6 hover:border-border-strong transition-colors"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10">
-                <f.icon className="h-5 w-5 text-accent" />
+          {features.map((f, i) => (
+            <Reveal key={f.title.en} delayMs={(i % 3) * 90}>
+              <div className="card-hover group h-full rounded-2xl border border-border-subtle bg-background-card p-6">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 transition-transform duration-300 group-hover:scale-110">
+                  <f.icon className="h-5 w-5 text-accent" />
+                </div>
+                <h3 className="mt-4 font-semibold">{f.title[lang]}</h3>
+                <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{f.body[lang]}</p>
               </div>
-              <h3 className="mt-4 font-semibold">{f.title[lang]}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{f.body[lang]}</p>
-            </div>
+            </Reveal>
           ))}
         </div>
       </section>
@@ -157,7 +187,7 @@ export default function Home() {
       <section className="border-t border-border-subtle bg-background-elevated/40">
         <div className="mx-auto max-w-6xl px-5 py-20">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div>
+            <Reveal>
               <h2 className="text-3xl font-semibold tracking-tight">
                 {lang === "en" ? "Calm, not alarming." : "Tranquilo, no alarmante."}
               </h2>
@@ -179,52 +209,56 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
-            </div>
-            <div className="rounded-2xl border border-border-subtle bg-background-card p-6">
-              <div className="flex items-center gap-2 text-xs text-foreground-muted">
-                <PhoneIcon className="h-4 w-4" />
-                {lang === "en" ? "Live call preview" : "Vista previa de llamada en vivo"}
-              </div>
-              <div className="mt-4 flex items-center gap-4">
-                <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-trust-caution">
-                  <span className="text-lg font-bold text-trust-caution">62</span>
+            </Reveal>
+            <Reveal delayMs={120}>
+              <div className="card-hover rounded-2xl border border-border-subtle bg-background-card p-6">
+                <div className="flex items-center gap-2 text-xs text-foreground-muted">
+                  <PhoneIcon className="h-4 w-4" />
+                  {lang === "en" ? "Live call preview" : "Vista previa de llamada en vivo"}
                 </div>
-                <div className="flex-1">
-                  <div className="text-sm font-medium text-trust-caution">
-                    {lang === "en" ? "Stay alert" : "Mantente alerta"}
+                <div className="mt-4 flex items-center gap-4">
+                  <div className="pulse-ring relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-trust-caution" style={{ ["--ring-color" as string]: "var(--trust-caution)" }}>
+                    <span className="text-lg font-bold text-trust-caution">62</span>
                   </div>
-                  <div className="mt-1 text-xs text-foreground-muted">
-                    {lang === "en"
-                      ? "Financial request detected: “gift cards” — 0:49"
-                      : "Solicitud financiera detectada: “tarjetas de regalo” — 0:49"}
+                  <div className="flex-1">
+                    <div className="text-sm font-medium text-trust-caution">
+                      {lang === "en" ? "Stay alert" : "Mantente alerta"}
+                    </div>
+                    <div className="mt-1 text-xs text-foreground-muted">
+                      {lang === "en"
+                        ? "Financial request detected: “gift cards” — 0:49"
+                        : "Solicitud financiera detectada: “tarjetas de regalo” — 0:49"}
+                    </div>
                   </div>
                 </div>
+                <div className="mt-5 rounded-xl bg-background-elevated p-4 text-xs leading-relaxed text-foreground-muted">
+                  {lang === "en"
+                    ? "“…please act now, I don't have much time left.”"
+                    : "“…por favor actúa ahora, no me queda mucho tiempo.”"}
+                </div>
               </div>
-              <div className="mt-5 rounded-xl bg-background-elevated p-4 text-xs leading-relaxed text-foreground-muted">
-                {lang === "en"
-                  ? "“…please act now, I don't have much time left.”"
-                  : "“…por favor actúa ahora, no me queda mucho tiempo.”"}
-              </div>
-            </div>
+            </Reveal>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-20 text-center">
-        <h2 className="text-3xl font-semibold tracking-tight">
-          {lang === "en" ? "See it catch a cloned voice." : "Míralo detectar una voz clonada."}
-        </h2>
-        <p className="mx-auto mt-4 max-w-xl text-foreground-muted">
-          {lang === "en"
-            ? "Record yourself, then compare against a synthetic reference sample — watch the Trust Meter react in real time."
-            : "Grábate a ti mismo y compáralo con una muestra sintética de referencia — observa cómo reacciona el medidor en tiempo real."}
-        </p>
-        <Link
-          href="/demo"
-          className="mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white hover:bg-accent-dim transition-colors"
-        >
-          {lang === "en" ? "Try the voice demo" : "Probar la demo de voz"}
-        </Link>
+        <Reveal>
+          <h2 className="text-3xl font-semibold tracking-tight">
+            {lang === "en" ? "See it catch a cloned voice." : "Míralo detectar una voz clonada."}
+          </h2>
+          <p className="mx-auto mt-4 max-w-xl text-foreground-muted">
+            {lang === "en"
+              ? "Record yourself, then compare against a synthetic reference sample — watch the Trust Meter react in real time."
+              : "Grábate a ti mismo y compáralo con una muestra sintética de referencia — observa cómo reacciona el medidor en tiempo real."}
+          </p>
+          <Link
+            href="/demo"
+            className="btn-press mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
+          >
+            {lang === "en" ? "Try the voice demo" : "Probar la demo de voz"}
+          </Link>
+        </Reveal>
       </section>
     </div>
   );

@@ -60,7 +60,7 @@ function ResultCard({
   lang: "en" | "es";
 }) {
   return (
-    <div className="rounded-2xl border border-border-subtle bg-background-card p-6">
+    <div className="card-hover rounded-2xl border border-border-subtle bg-background-card p-6">
       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10">
         <WaveformIcon className="h-5 w-5 text-accent" />
       </div>
@@ -87,14 +87,14 @@ function ResultCard({
             {onPlay && (
               <button
                 onClick={onPlay}
-                className="flex-1 rounded-full border border-border-strong py-2 text-xs font-medium hover:bg-background-elevated transition-colors"
+                className="btn-press flex-1 rounded-full border border-border-strong py-2 text-xs font-medium hover:bg-background-elevated"
               >
                 {lang === "en" ? "Play back" : "Reproducir"}
               </button>
             )}
             <button
               onClick={onPrimaryAction}
-              className="flex-1 rounded-full bg-accent py-2 text-xs font-medium text-white hover:bg-accent-dim transition-colors"
+              className="btn-press flex-1 rounded-full bg-accent py-2 text-xs font-medium text-white hover:bg-accent-dim"
             >
               {lang === "en" ? "Try again" : "Intentar de nuevo"}
             </button>
@@ -105,7 +105,7 @@ function ResultCard({
           <button
             onClick={onPrimaryAction}
             disabled={disabled || slot.status === "recording" || slot.status === "analyzing"}
-            className="w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white hover:bg-accent-dim transition-colors disabled:opacity-50"
+            className="btn-press w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim disabled:opacity-50 disabled:shadow-none"
           >
             {slot.status === "recording"
               ? lang === "en" ? "Recording…" : "Grabando…"

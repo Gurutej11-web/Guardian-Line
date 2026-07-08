@@ -6,6 +6,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { loadReports } from "@/lib/storage";
 import { CallReport } from "@/lib/types";
 import { ChevronRightIcon } from "@/components/icons";
+import { Reveal } from "@/components/Reveal";
 
 const bandColor = {
   safe: "var(--trust-safe)",
@@ -42,32 +43,33 @@ export default function ReportsPage() {
         </div>
       ) : (
         <div className="mt-8 space-y-3">
-          {reports.map((r) => (
-            <Link
-              key={r.id}
-              href={`/reports/${r.id}`}
-              className="flex items-center justify-between rounded-2xl border border-border-subtle bg-background-card px-5 py-4 hover:border-border-strong transition-colors"
-            >
-              <div>
-                <div className="font-medium">{r.scenario}</div>
-                <div className="mt-1 text-xs text-foreground-muted">
-                  {new Date(r.startedAt).toLocaleString(lang === "en" ? "en-US" : "es-ES")} ·{" "}
-                  {Math.round(r.durationMs / 1000)}s
+          {reports.map((r, i) => (
+            <Reveal key={r.id} delayMs={Math.min(i, 6) * 50}>
+              <Link
+                href={`/reports/${r.id}`}
+                className="card-hover group flex items-center justify-between rounded-2xl border border-border-subtle bg-background-card px-5 py-4"
+              >
+                <div>
+                  <div className="font-medium">{r.scenario}</div>
+                  <div className="mt-1 text-xs text-foreground-muted">
+                    {new Date(r.startedAt).toLocaleString(lang === "en" ? "en-US" : "es-ES")} ·{" "}
+                    {Math.round(r.durationMs / 1000)}s
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span
-                  className="rounded-full px-3 py-1 text-xs font-semibold"
-                  style={{
-                    color: bandColor[r.finalBand],
-                    backgroundColor: `color-mix(in srgb, ${bandColor[r.finalBand]} 16%, transparent)`,
-                  }}
-                >
-                  {r.finalTrustScore}
-                </span>
-                <ChevronRightIcon className="h-4 w-4 text-foreground-muted" />
-              </div>
-            </Link>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="rounded-full px-3 py-1 text-xs font-semibold"
+                    style={{
+                      color: bandColor[r.finalBand],
+                      backgroundColor: `color-mix(in srgb, ${bandColor[r.finalBand]} 16%, transparent)`,
+                    }}
+                  >
+                    {r.finalTrustScore}
+                  </span>
+                  <ChevronRightIcon className="h-4 w-4 text-foreground-muted transition-transform duration-300 group-hover:translate-x-0.5" />
+                </div>
+              </Link>
+            </Reveal>
           ))}
         </div>
       )}

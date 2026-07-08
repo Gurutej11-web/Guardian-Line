@@ -2,7 +2,10 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { SettingsProvider } from "@/context/SettingsContext";
+import { ToastProvider } from "@/context/ToastContext";
 import { Header } from "@/components/Header";
+import { PageTransition } from "@/components/PageTransition";
+import { ScrollToTop } from "@/components/ScrollToTop";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,14 +35,19 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         <SettingsProvider>
-          <Header />
-          <main className="flex-1 flex flex-col">{children}</main>
-          <footer className="border-t border-border-subtle py-6">
-            <div className="mx-auto max-w-6xl px-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-foreground-muted">
-              <span>Guardian Line — built for Lumora Hacks Summer 2026.</span>
-              <span>Privacy-first: voice analysis runs on-device.</span>
-            </div>
-          </footer>
+          <ToastProvider>
+            <Header />
+            <main className="flex-1 flex flex-col">
+              <PageTransition>{children}</PageTransition>
+            </main>
+            <footer className="border-t border-border-subtle py-6">
+              <div className="mx-auto max-w-6xl px-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-foreground-muted">
+                <span>© {new Date().getFullYear()} Guardian Line. Not a substitute for professional fraud guidance.</span>
+                <span>Privacy-first: voice analysis runs on-device.</span>
+              </div>
+            </footer>
+            <ScrollToTop />
+          </ToastProvider>
         </SettingsProvider>
       </body>
     </html>

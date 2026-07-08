@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
+import { useToast } from "@/context/ToastContext";
 import { getReport } from "@/lib/storage";
 import { CallReport } from "@/lib/types";
 import { categoryLabels } from "@/lib/i18n";
@@ -86,6 +87,7 @@ function buildFtcStyleReport(report: CallReport, lang: "en" | "es"): string {
 export default function ReportDetailPage() {
   const params = useParams<{ id: string }>();
   const { settings, strings } = useSettings();
+  const { showToast } = useToast();
   const lang = settings.language;
   const [report, setReport] = useState<CallReport | null | undefined>(undefined);
 
@@ -125,23 +127,39 @@ export default function ReportDetailPage() {
             {Math.round(report.durationMs / 1000)}s
           </div>
         </div>
-        <div className="flex gap-2 print:hidden">
+        <div className="flex flex-wrap gap-2 print:hidden">
+          <button
+            onClick={async () => {
+              try {
+                await navigator.clipboard.writeText(buildFtcStyleReport(report, lang));
+                showToast(lang === "en" ? "Summary copied to clipboard" : "Resumen copiado al portapapeles", "success");
+              } catch {
+                showToast(lang === "en" ? "Couldn't copy — try the download instead" : "No se pudo copiar — intenta la descarga", "danger");
+              }
+            }}
+            className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
+          >
+            {lang === "en" ? "Copy summary" : "Copiar resumen"}
+          </button>
           <button
             onClick={() => window.print()}
-            className="rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated transition-colors"
+            className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
           >
             {strings.report.export}
           </button>
           <button
-            onClick={() => downloadFile(`guardian-line-report-${report.id}.txt`, buildFtcStyleReport(report, lang))}
-            className="rounded-full bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-dim transition-colors"
+            onClick={() => {
+              downloadFile(`guardian-line-report-${report.id}.txt`, buildFtcStyleReport(report, lang));
+              showToast(lang === "en" ? "Report downloaded" : "Informe descargado", "success");
+            }}
+            className="btn-press rounded-full bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-dim"
           >
             {strings.report.fileScam}
           </button>
         </div>
       </div>
 
-      <div className="mt-8 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 rounded-2xl border border-border-subtle bg-background-card p-6">
+      <div className="card-hover animate-fade-in-up mt-8 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 rounded-2xl border border-border-subtle bg-background-card p-6">
         <div className="flex flex-col items-center justify-center">
           <div className="text-4xl font-bold tabular-nums" style={{ color }}>
             {report.finalTrustScore}
@@ -182,7 +200,7 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
-        <div className="rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]">
+        <div className="card-hover animate-fade-in-up rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]" style={{ animationDelay: "80ms" }}>
           <h2 className="mb-3 text-sm font-semibold text-foreground-muted">
             {lang === "en" ? "Full transcript" : "Transcripción completa"}
           </h2>
@@ -190,7 +208,7 @@ export default function ReportDetailPage() {
             <TranscriptView entries={report.transcript} />
           </div>
         </div>
-        <div className="rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]">
+        <div className="card-hover animate-fade-in-up rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]" style={{ animationDelay: "140ms" }}>
           <h2 className="mb-3 text-sm font-semibold text-foreground-muted">
             {lang === "en" ? "Flagged moments" : "Momentos marcados"}
           </h2>

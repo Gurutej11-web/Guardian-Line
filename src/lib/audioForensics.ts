@@ -274,6 +274,13 @@ export class LiveMicCapture {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   readonly analyzer = new VoiceForensicsAnalyzer(40);
 
+  /** Exposes the underlying AnalyserNode so a UI component can drive a
+   * real-time waveform/level visualizer off the same live audio graph
+   * without competing with the (slower, 300ms-interval) forensics loop. */
+  getAnalyserNode(): AnalyserNode | null {
+    return this.analyserNode;
+  }
+
   async start(onSample: (sample: VoiceFeatureSample) => void, startedAt: number) {
     this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;

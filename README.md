@@ -4,8 +4,6 @@
 
 > "Guardian Line listens alongside your phone calls in real time and warns you the moment a voice sounds cloned or a conversation turns into a scam — before you send the money."
 
-Built for **Lumora Hacks Summer 2026**.
-
 ## The problem
 
 AI voice cloning now needs 3–10 seconds of sample audio to produce a convincing clone of someone's voice. Scammers use cloned voices of grandchildren, bosses, and bank officers to create urgent, emotionally manipulative calls. The FBI, FTC, and AARP have all issued warnings about this — and no mainstream consumer tool detects it *live, during the call*.

@@ -49,14 +49,14 @@ export function Header() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => updateSettings({ language: settings.language === "en" ? "es" : "en" })}
-            className="rounded-full border border-border-subtle px-3 py-1.5 text-xs font-medium text-foreground-muted hover:border-border-strong hover:text-foreground transition-colors"
+            className="btn-press rounded-full border border-border-subtle px-3 py-1.5 text-xs font-medium text-foreground-muted hover:border-border-strong hover:text-foreground"
             aria-label="Toggle language"
           >
             {settings.language === "en" ? "EN" : "ES"}
           </button>
           <Link
             href="/dashboard"
-            className="rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-dim transition-colors"
+            className="btn-press rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-dim"
           >
             {strings.nav.dashboard}
           </Link>

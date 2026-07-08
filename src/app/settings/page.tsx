@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
+import { useToast } from "@/context/ToastContext";
 import { clearAllData } from "@/lib/storage";
 import { FamilyContact } from "@/lib/types";
 import { KeyIcon, LockIcon, UsersIcon } from "@/components/icons";
@@ -25,9 +26,22 @@ function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean
   );
 }
 
-function Section({ title, description, children }: { title: string; description?: string; children: React.ReactNode }) {
+function Section({
+  title,
+  description,
+  children,
+  delayMs = 0,
+}: {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  delayMs?: number;
+}) {
   return (
-    <section className="rounded-2xl border border-border-subtle bg-background-card p-6">
+    <section
+      className="card-hover animate-fade-in-up rounded-2xl border border-border-subtle bg-background-card p-6"
+      style={{ animationDelay: `${delayMs}ms` }}
+    >
       <h2 className="font-semibold">{title}</h2>
       {description && <p className="mt-1 text-xs text-foreground-muted">{description}</p>}
       <div className="mt-5">{children}</div>
@@ -37,12 +51,23 @@ function Section({ title, description, children }: { title: string; description?
 
 export default function SettingsPage() {
   const { settings, updateSettings, strings } = useSettings();
+  const { showToast } = useToast();
   const lang = settings.language;
 
   const [safeWordInput, setSafeWordInput] = useState(settings.safeWord ?? "");
   const [contactName, setContactName] = useState("");
   const [contactMethod, setContactMethod] = useState<FamilyContact["method"]>("sms");
   const [contactValue, setContactValue] = useState("");
+
+  function saveSafeWord() {
+    updateSettings({ safeWord: safeWordInput.trim() || null });
+    showToast(
+      safeWordInput.trim()
+        ? lang === "en" ? "Safe word saved" : "Palabra segura guardada"
+        : lang === "en" ? "Safe word cleared" : "Palabra segura eliminada",
+      "success"
+    );
+  }
 
   function addContact() {
     if (!contactName.trim() || !contactValue.trim()) return;
@@ -55,10 +80,12 @@ export default function SettingsPage() {
     updateSettings({ familyContacts: [...settings.familyContacts, newContact] });
     setContactName("");
     setContactValue("");
+    showToast(lang === "en" ? "Contact added" : "Contacto añadido", "success");
   }
 
   function removeContact(id: string) {
     updateSettings({ familyContacts: settings.familyContacts.filter((c) => c.id !== id) });
+    showToast(lang === "en" ? "Contact removed" : "Contacto eliminado");
   }
 
   return (
@@ -71,13 +98,13 @@ export default function SettingsPage() {
       </p>
 
       <div className="mt-8 space-y-5">
-        <Section title={lang === "en" ? "Language" : "Idioma"}>
+        <Section title={lang === "en" ? "Language" : "Idioma"} delayMs={0}>
           <div className="flex gap-2">
             {(["en", "es"] as const).map((l) => (
               <button
                 key={l}
                 onClick={() => updateSettings({ language: l })}
-                className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                className={`btn-press rounded-full px-4 py-2 text-sm font-medium ${
                   settings.language === l ? "bg-accent text-white" : "border border-border-strong text-foreground-muted"
                 }`}
               >
@@ -88,6 +115,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
+          delayMs={60}
           title={lang === "en" ? "Sensitivity" : "Sensibilidad"}
           description={
             lang === "en"
@@ -110,7 +138,7 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section title={lang === "en" ? "Privacy & accessibility" : "Privacidad y accesibilidad"}>
+        <Section delayMs={120} title={lang === "en" ? "Privacy & accessibility" : "Privacidad y accesibilidad"}>
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -156,6 +184,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
+          delayMs={180}
           title={strings.safeWord.title}
           description={
             lang === "en"
@@ -174,8 +203,8 @@ export default function SettingsPage() {
               className="flex-1 rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
             />
             <button
-              onClick={() => updateSettings({ safeWord: safeWordInput.trim() || null })}
-              className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim transition-colors"
+              onClick={saveSafeWord}
+              className="btn-press rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim"
             >
               {lang === "en" ? "Save" : "Guardar"}
             </button>
@@ -188,6 +217,7 @@ export default function SettingsPage() {
         </Section>
 
         <Section
+          delayMs={240}
           title={strings.familyCircle.title}
           description={
             lang === "en"
@@ -245,7 +275,7 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={addContact}
-                  className="rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim transition-colors"
+                  className="btn-press rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim"
                 >
                   {lang === "en" ? "Add" : "Añadir"}
                 </button>
@@ -254,7 +284,7 @@ export default function SettingsPage() {
           )}
         </Section>
 
-        <Section title={lang === "en" ? "Data" : "Datos"}>
+        <Section delayMs={300} title={lang === "en" ? "Data" : "Datos"}>
           <button
             onClick={() => {
               if (confirm(lang === "en" ? "Clear all settings and saved reports on this device?" : "¿Borrar toda la configuración e informes guardados en este dispositivo?")) {
@@ -262,7 +292,7 @@ export default function SettingsPage() {
                 window.location.reload();
               }
             }}
-            className="rounded-full border border-trust-danger/50 px-4 py-2 text-xs font-medium text-trust-danger hover:bg-trust-danger/10 transition-colors"
+            className="btn-press rounded-full border border-trust-danger/50 px-4 py-2 text-xs font-medium text-trust-danger hover:bg-trust-danger/10"
           >
             {lang === "en" ? "Clear all local data" : "Borrar todos los datos locales"}
           </button>

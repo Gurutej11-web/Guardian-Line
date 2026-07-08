@@ -10,6 +10,7 @@ import { BreakTheSpellBanner } from "@/components/BreakTheSpellBanner";
 import { SafeWordModal } from "@/components/SafeWordModal";
 import { FamilyCircleAlert } from "@/components/FamilyCircleAlert";
 import { PhoneIcon, WaveformIcon } from "@/components/icons";
+import { AudioLevelBars } from "@/components/AudioLevelBars";
 import { LiveMicCapture } from "@/lib/audioForensics";
 import { LiveTranscriber, isLiveTranscriptionSupported } from "@/lib/transcription";
 import { classifyText, scoreTranscriptRisk, toRiskSpans, CategoryMatch } from "@/lib/scamClassifier";
@@ -87,6 +88,7 @@ export default function DashboardPage() {
   const [callActive, setCallActive] = useState(false);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [micError, setMicError] = useState<string | null>(null);
+  const [micReady, setMicReady] = useState(false);
 
   const [transcript, setTranscript] = useState<TranscriptEntry[]>([]);
   const [flags, setFlags] = useState<RiskFlag[]>([]);
@@ -140,6 +142,7 @@ export default function DashboardPage() {
     baselineSampleRef.current = null;
     interimEntryIdRef.current = null;
     setMicError(null);
+    setMicReady(false);
   }
 
   function pushFlags(newFlags: RiskFlag[]) {
@@ -224,6 +227,7 @@ export default function DashboardPage() {
         if (voiceFlag) pushFlags([voiceFlag]);
         updateFusion(sample.timestampMs);
       }, startTimeRef.current);
+      setMicReady(true);
     } catch {
       setMicError(
         lang === "en"
@@ -389,8 +393,8 @@ export default function DashboardPage() {
           <div className="mt-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
             <button
               onClick={() => setMode("live-mic")}
-              className={`rounded-2xl border p-5 text-left transition-colors ${
-                mode === "live-mic" ? "border-accent bg-accent/10" : "border-border-subtle bg-background-card hover:border-border-strong"
+              className={`card-hover rounded-2xl border p-5 text-left ${
+                mode === "live-mic" ? "border-accent bg-accent/10" : "border-border-subtle bg-background-card"
               }`}
             >
               <WaveformIcon className="h-6 w-6 text-accent" />
@@ -403,8 +407,8 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setMode("scripted")}
-              className={`rounded-2xl border p-5 text-left transition-colors ${
-                mode === "scripted" ? "border-accent bg-accent/10" : "border-border-subtle bg-background-card hover:border-border-strong"
+              className={`card-hover rounded-2xl border p-5 text-left ${
+                mode === "scripted" ? "border-accent bg-accent/10" : "border-border-subtle bg-background-card"
               }`}
             >
               <PhoneIcon className="h-6 w-6 text-accent" />
@@ -449,7 +453,7 @@ export default function DashboardPage() {
           {mode !== "idle" && (
             <button
               onClick={mode === "live-mic" ? startLiveMic : startScriptedDemo}
-              className="mt-8 w-full rounded-full bg-accent py-3 text-sm font-semibold text-white hover:bg-accent-dim transition-colors"
+              className="btn-press mt-8 w-full rounded-full bg-accent py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
             >
               {lang === "en" ? "Start" : "Comenzar"}
             </button>
@@ -470,11 +474,21 @@ export default function DashboardPage() {
             </div>
             <button
               onClick={endCall}
-              className="rounded-full bg-trust-danger px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90 transition-opacity"
+              className="btn-press rounded-full bg-trust-danger px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
             >
               {lang === "en" ? "End call" : "Terminar llamada"}
             </button>
           </div>
+
+          {mode === "live-mic" && micReady && (
+            <div className="animate-fade-in-up flex items-center gap-3 rounded-2xl border border-border-subtle bg-background-card px-5 py-3">
+              <WaveformIcon className="h-4 w-4 shrink-0 text-accent" />
+              <AudioLevelBars analyser={micCaptureRef.current?.getAnalyserNode() ?? null} className="flex-1" />
+              <span className="shrink-0 text-xs text-foreground-muted">
+                {lang === "en" ? "Listening" : "Escuchando"}
+              </span>
+            </div>
+          )}
 
           {micError && (
             <div className="rounded-xl border border-trust-caution/40 bg-trust-caution/10 px-4 py-3 text-sm text-trust-caution">
