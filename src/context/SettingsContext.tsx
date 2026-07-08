@@ -19,6 +19,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
 
   useEffect(() => {
+    // One-time hydration from localStorage — must run client-side only,
+    // so this legitimately cannot be a lazy useState initializer without
+    // causing an SSR/client markup mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSettings(loadSettings());
     setHydrated(true);
   }, []);

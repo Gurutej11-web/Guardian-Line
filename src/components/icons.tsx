@@ -51,9 +51,9 @@ export function PhoneIcon({ className }: IconProps) {
   );
 }
 
-export function AlertIcon({ className }: IconProps) {
+export function AlertIcon({ className, style }: IconProps & { style?: React.CSSProperties }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" className={className}>
+    <svg viewBox="0 0 24 24" fill="none" className={className} style={style}>
       <path
         d="M12 3.5l9.5 16.5H2.5L12 3.5z"
         stroke="currentColor"
