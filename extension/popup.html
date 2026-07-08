@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Guardian Line</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+        <path
+          d="M12 2.5l7.5 3v5.4c0 4.86-3.19 8.86-7.5 10.6-4.31-1.74-7.5-5.74-7.5-10.6V5.5l7.5-3z"
+          fill="#4f8cff"
+          fill-opacity="0.25"
+          stroke="#4f8cff"
+          stroke-width="1.5"
+        />
+        <path
+          d="M8.7 12.2l2.2 2.2 4.4-4.6"
+          stroke="#4f8cff"
+          stroke-width="1.6"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        />
+      </svg>
+      <span class="title">Guardian Line</span>
+    </header>
+
+    <div id="status" class="status status--idle">
+      <span class="dot"></span>
+      <span id="statusText">Checking this tab…</span>
+    </div>
+
+    <button id="openDashboard" class="primary">Open Trust Meter</button>
+
+    <div class="settings">
+      <label for="dashboardUrl">Dashboard URL</label>
+      <div class="row">
+        <input id="dashboardUrl" type="text" placeholder="http://localhost:3010" />
+        <button id="saveUrl">Save</button>
+      </div>
+    </div>
+
+    <p class="footnote">
+      Voice analysis always runs on-device inside the Guardian Line tab. This
+      extension only reads the active tab's URL to detect known call apps —
+      it does not read page content or call audio.
+    </p>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

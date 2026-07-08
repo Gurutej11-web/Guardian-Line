@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Guardian Line — Scam Call Guard",
+  "version": "1.0.0",
+  "description": "Detects when you're on a VoIP call tab and gives you one click into your Guardian Line Trust Meter.",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Guardian Line"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": ["storage", "tabs"],
+  "host_permissions": [
+    "*://voice.google.com/*",
+    "*://web.whatsapp.com/*",
+    "*://*.zoom.us/*",
+    "*://meet.google.com/*",
+    "*://teams.microsoft.com/*",
+    "*://teams.live.com/*"
+  ]
+}
