@@ -31,6 +31,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     if (hydrated) saveSettings(settings);
   }, [settings, hydrated]);
 
+  useEffect(() => {
+    document.body.classList.toggle("high-contrast", settings.highContrast);
+    document.body.classList.toggle("large-text", settings.largeText);
+  }, [settings.highContrast, settings.largeText]);
+
   const updateSettings = (patch: Partial<AppSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));
   };

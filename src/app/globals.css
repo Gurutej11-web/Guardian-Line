@@ -65,6 +65,23 @@ body {
   color: white;
 }
 
+body.large-text {
+  font-size: 113%;
+}
+
+body.high-contrast {
+  --background: #000000;
+  --background-elevated: #0b0b0b;
+  --background-card: #000000;
+  --foreground: #ffffff;
+  --foreground-muted: #e2e2e2;
+  --border-subtle: #ffffff;
+  --border-strong: #ffffff;
+  --trust-safe: #34d058;
+  --trust-caution: #ffb020;
+  --trust-danger: #ff4d4d;
+}
+
 @keyframes pulse-ring {
   0% {
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--ring-color, var(--trust-safe)) 55%, transparent);
