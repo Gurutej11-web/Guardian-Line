@@ -26,12 +26,19 @@ function HighlightedText({ entry, lang }: { entry: TranscriptEntry; lang: "en" |
   const { text, riskSpans } = entry;
   if (!riskSpans.length) return <>{text}</>;
 
-  const sorted = [...riskSpans].sort((a, b) => a.start - b.start);
+  // Different categories can match overlapping or identical substrings
+  // (e.g. "don't hang up" matches both the urgency and isolation
+  // patterns) — sorting alone doesn't dedupe that, so without clamping
+  // each span to what's left after `cursor`, an overlapping span would
+  // re-render text that a previous span already covered.
+  const sorted = [...riskSpans].sort((a, b) => a.start - b.start || b.end - a.end);
   const parts: React.ReactNode[] = [];
   let cursor = 0;
 
   sorted.forEach((span, i) => {
-    if (span.start > cursor) parts.push(<span key={`t-${i}`}>{text.slice(cursor, span.start)}</span>);
+    if (span.end <= cursor) return; // fully covered by an earlier span
+    const start = Math.max(span.start, cursor);
+    if (start > cursor) parts.push(<span key={`t-${i}`}>{text.slice(cursor, start)}</span>);
     const color = categoryColor[span.category];
     parts.push(
       <mark
@@ -46,10 +53,10 @@ function HighlightedText({ entry, lang }: { entry: TranscriptEntry; lang: "en" |
           textUnderlineOffset: "3px",
         }}
       >
-        {text.slice(span.start, span.end)}
+        {text.slice(start, span.end)}
       </mark>
     );
-    cursor = Math.max(cursor, span.end);
+    cursor = span.end;
   });
   if (cursor < text.length) parts.push(<span key="t-last">{text.slice(cursor)}</span>);
   return <>{parts}</>;
