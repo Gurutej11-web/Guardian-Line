@@ -38,6 +38,17 @@ export function isLiveTranscriptionSupported(): boolean {
 
 const langTag: Record<Language, string> = { en: "en-US", es: "es-ES" };
 
+const errorMessages = {
+  unsupported: {
+    en: "Live transcription is not supported in this browser.",
+    es: "La transcripción en vivo no es compatible con este navegador.",
+  },
+  recognitionError: {
+    en: "Speech recognition error — check microphone permissions.",
+    es: "Error de reconocimiento de voz — verifica los permisos del micrófono.",
+  },
+};
+
 export class LiveTranscriber {
   private recognition: SpeechRecognitionLike | null = null;
   private startedAt = 0;
@@ -50,7 +61,7 @@ export class LiveTranscriber {
   ) {
     const Ctor = getSpeechRecognitionCtor();
     if (!Ctor) {
-      onError?.("Live transcription is not supported in this browser.");
+      onError?.(errorMessages.unsupported[lang]);
       return false;
     }
     this.startedAt = Date.now();
@@ -70,7 +81,7 @@ export class LiveTranscriber {
     };
 
     this.recognition.onerror = () => {
-      if (!this.stoppedManually) onError?.("Speech recognition error — check microphone permissions.");
+      if (!this.stoppedManually) onError?.(errorMessages.recognitionError[lang]);
     };
 
     this.recognition.onend = () => {
