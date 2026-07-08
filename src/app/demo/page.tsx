@@ -94,7 +94,7 @@ function ResultCard({
             )}
             <button
               onClick={onPrimaryAction}
-              className="btn-press flex-1 rounded-full bg-accent py-2 text-xs font-medium text-white hover:bg-accent-dim"
+              className="btn-press flex-1 rounded-full bg-accent-solid py-2 text-xs font-medium text-white hover:bg-accent-solid-hover"
             >
               {lang === "en" ? "Try again" : "Intentar de nuevo"}
             </button>
@@ -105,7 +105,7 @@ function ResultCard({
           <button
             onClick={onPrimaryAction}
             disabled={disabled || slot.status === "recording" || slot.status === "analyzing"}
-            className="btn-press w-full rounded-full bg-accent py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim disabled:opacity-50 disabled:shadow-none"
+            className="btn-press w-full rounded-full bg-accent-solid py-2.5 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-solid-hover disabled:opacity-50 disabled:shadow-none"
           >
             {slot.status === "recording"
               ? lang === "en" ? "Recording…" : "Grabando…"

@@ -152,7 +152,7 @@ export default function ReportDetailPage() {
               downloadFile(`guardian-line-report-${report.id}.txt`, buildFtcStyleReport(report, lang));
               showToast(lang === "en" ? "Report downloaded" : "Informe descargado", "success");
             }}
-            className="btn-press rounded-full bg-accent px-4 py-2 text-xs font-medium text-white hover:bg-accent-dim"
+            className="btn-press rounded-full bg-accent-solid px-4 py-2 text-xs font-medium text-white hover:bg-accent-solid-hover"
           >
             {strings.report.fileScam}
           </button>

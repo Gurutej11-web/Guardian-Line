@@ -56,7 +56,7 @@ export function Header() {
           </button>
           <Link
             href="/dashboard"
-            className="btn-press rounded-full bg-accent px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-dim"
+            className="btn-press rounded-full bg-accent-solid px-4 py-1.5 text-sm font-medium text-white hover:bg-accent-solid-hover"
           >
             {strings.nav.dashboard}
           </Link>

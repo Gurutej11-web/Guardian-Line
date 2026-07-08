@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
 import { Reveal } from "@/components/Reveal";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
+import { AmbientWaveform } from "@/components/AmbientWaveform";
 import {
   AlertIcon,
   CheckIcon,
@@ -33,7 +34,7 @@ const stats = [
   },
 ];
 
-const features = [
+const signalFeatures = [
   {
     icon: WaveformIcon,
     title: { en: "Voice authenticity signal", es: "Señal de autenticidad de voz" },
@@ -58,6 +59,9 @@ const features = [
       es: "Ambas señales se combinan en un solo medidor tranquilo y explicable — nunca una caja negra.",
     },
   },
+];
+
+const protectionFeatures = [
   {
     icon: KeyIcon,
     title: { en: "Safe Word verification", es: "Verificación de palabra segura" },
@@ -92,9 +96,11 @@ export default function Home() {
     <div className="flex flex-col">
       <section className="relative overflow-hidden border-b border-border-subtle">
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--accent-dim)_0%,_transparent_60%)] opacity-30" />
-          <div className="animate-float-blob absolute -top-24 left-1/4 h-72 w-72 rounded-full bg-accent/20 blur-3xl" />
-          <div className="animate-float-blob-slow absolute top-32 right-1/5 h-80 w-80 rounded-full bg-trust-safe/10 blur-3xl" />
+          <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--accent-dim)_0%,_transparent_65%)] opacity-20" />
+          <AmbientWaveform
+            className="absolute inset-x-0 bottom-0 h-40 opacity-[0.14] [mask-image:linear-gradient(to_top,black,transparent)] sm:h-56"
+            barCount={72}
+          />
         </div>
         <div className="mx-auto max-w-6xl px-5 pt-20 pb-24 sm:pt-28 sm:pb-32">
           <div className="mx-auto max-w-3xl text-center">
@@ -129,7 +135,7 @@ export default function Home() {
             >
               <Link
                 href="/dashboard"
-                className="btn-press w-full sm:w-auto rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
+                className="btn-press w-full sm:w-auto rounded-full bg-accent-solid px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-solid-hover"
               >
                 {lang === "en" ? "Open Live Monitor" : "Abrir monitor en vivo"}
               </Link>
@@ -169,18 +175,42 @@ export default function Home() {
           </p>
         </Reveal>
 
-        <div className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-          {features.map((f, i) => (
-            <Reveal key={f.title.en} delayMs={(i % 3) * 90}>
-              <div className="card-hover group h-full rounded-2xl border border-border-subtle bg-background-card p-6">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 transition-transform duration-300 group-hover:scale-110">
-                  <f.icon className="h-5 w-5 text-accent" />
+        <div className="mt-14">
+          <span className="text-xs font-semibold uppercase tracking-wider text-accent">
+            {lang === "en" ? "How it detects" : "Cómo detecta"}
+          </span>
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {signalFeatures.map((f, i) => (
+              <Reveal key={f.title.en} delayMs={i * 90}>
+                <div className="card-hover group h-full rounded-2xl border border-border-subtle bg-background-card p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-accent/10 transition-transform duration-300 group-hover:scale-110">
+                    <f.icon className="h-5 w-5 text-accent" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">{f.title[lang]}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{f.body[lang]}</p>
                 </div>
-                <h3 className="mt-4 font-semibold">{f.title[lang]}</h3>
-                <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{f.body[lang]}</p>
-              </div>
-            </Reveal>
-          ))}
+              </Reveal>
+            ))}
+          </div>
+        </div>
+
+        <div className="mt-14">
+          <span className="text-xs font-semibold uppercase tracking-wider text-trust-safe">
+            {lang === "en" ? "How it protects" : "Cómo protege"}
+          </span>
+          <div className="mt-4 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {protectionFeatures.map((f, i) => (
+              <Reveal key={f.title.en} delayMs={i * 90}>
+                <div className="card-hover group h-full rounded-2xl border border-border-subtle bg-background-card p-6">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-trust-safe/10 transition-transform duration-300 group-hover:scale-110">
+                    <f.icon className="h-5 w-5 text-trust-safe" />
+                  </div>
+                  <h3 className="mt-4 font-semibold">{f.title[lang]}</h3>
+                  <p className="mt-2 text-sm leading-relaxed text-foreground-muted">{f.body[lang]}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -217,7 +247,7 @@ export default function Home() {
                   {lang === "en" ? "Live call preview" : "Vista previa de llamada en vivo"}
                 </div>
                 <div className="mt-4 flex items-center gap-4">
-                  <div className="pulse-ring relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-trust-caution" style={{ ["--ring-color" as string]: "var(--trust-caution)" }}>
+                  <div className="relative flex h-20 w-20 items-center justify-center rounded-full border-4 border-trust-caution">
                     <span className="text-lg font-bold text-trust-caution">62</span>
                   </div>
                   <div className="flex-1">
@@ -254,7 +284,7 @@ export default function Home() {
           </p>
           <Link
             href="/demo"
-            className="btn-press mt-8 inline-flex items-center gap-2 rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
+            className="btn-press mt-8 inline-flex items-center gap-2 rounded-full bg-accent-solid px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-solid-hover"
           >
             {lang === "en" ? "Try the voice demo" : "Probar la demo de voz"}
           </Link>

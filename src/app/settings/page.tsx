@@ -105,7 +105,7 @@ export default function SettingsPage() {
                 key={l}
                 onClick={() => updateSettings({ language: l })}
                 className={`btn-press rounded-full px-4 py-2 text-sm font-medium ${
-                  settings.language === l ? "bg-accent text-white" : "border border-border-strong text-foreground-muted"
+                  settings.language === l ? "bg-accent-solid text-white" : "border border-border-strong text-foreground-muted"
                 }`}
               >
                 {l === "en" ? "English" : "Español"}
@@ -204,7 +204,7 @@ export default function SettingsPage() {
             />
             <button
               onClick={saveSafeWord}
-              className="btn-press rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim"
+              className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
             >
               {lang === "en" ? "Save" : "Guardar"}
             </button>
@@ -275,7 +275,7 @@ export default function SettingsPage() {
                 />
                 <button
                   onClick={addContact}
-                  className="btn-press rounded-lg bg-accent px-3 py-2 text-xs font-semibold text-white hover:bg-accent-dim"
+                  className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
                 >
                   {lang === "en" ? "Add" : "Añadir"}
                 </button>

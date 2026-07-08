@@ -3,6 +3,7 @@
 import { TrustBand } from "@/lib/types";
 import { useSettings } from "@/context/SettingsContext";
 import { useAnimatedNumber } from "@/hooks/useAnimatedNumber";
+import { AlertIcon, WaveformIcon } from "./icons";
 
 const bandColor: Record<TrustBand, string> = {
   safe: "var(--trust-safe)",
@@ -90,19 +91,30 @@ export function TrustMeter({
       </div>
 
       <div className="mt-5 w-full max-w-[260px] space-y-3">
-        <MeterBar label={strings.trustMeter.voiceAuth} value={voiceAuthScore} />
-        <MeterBar label={strings.trustMeter.transcriptRisk} value={transcriptRiskScore} />
+        <MeterBar icon={WaveformIcon} label={strings.trustMeter.voiceAuth} value={voiceAuthScore} />
+        <MeterBar icon={AlertIcon} label={strings.trustMeter.transcriptRisk} value={transcriptRiskScore} />
       </div>
     </div>
   );
 }
 
-function MeterBar({ label, value }: { label: string; value: number }) {
+function MeterBar({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: (props: { className?: string }) => React.ReactElement;
+  label: string;
+  value: number;
+}) {
   const barColor = value >= 65 ? "var(--trust-danger)" : value >= 32 ? "var(--trust-caution)" : "var(--trust-safe)";
   return (
     <div>
       <div className="flex items-center justify-between text-xs text-foreground-muted">
-        <span>{label}</span>
+        <span className="flex items-center gap-1.5">
+          <Icon className="h-3 w-3 shrink-0 opacity-70" />
+          {label}
+        </span>
         <span className="tabular-nums">{Math.round(value)}%</span>
       </div>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded-full bg-background-elevated">

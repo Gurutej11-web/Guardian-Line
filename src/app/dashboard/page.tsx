@@ -453,7 +453,7 @@ export default function DashboardPage() {
           {mode !== "idle" && (
             <button
               onClick={mode === "live-mic" ? startLiveMic : startScriptedDemo}
-              className="btn-press mt-8 w-full rounded-full bg-accent py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-dim"
+              className="btn-press mt-8 w-full rounded-full bg-accent-solid py-3 text-sm font-semibold text-white shadow-lg shadow-accent/20 hover:bg-accent-solid-hover"
             >
               {lang === "en" ? "Start" : "Comenzar"}
             </button>
@@ -461,7 +461,7 @@ export default function DashboardPage() {
         </div>
       ) : (
         <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-between rounded-2xl border border-border-subtle bg-background-card px-5 py-3">
+          <div className="animate-fade-in-up flex items-center justify-between rounded-2xl border border-border-subtle bg-background-card px-5 py-3">
             <div className="flex items-center gap-2 text-sm">
               <span className="relative flex h-2.5 w-2.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-trust-danger opacity-60" />
@@ -499,7 +499,10 @@ export default function DashboardPage() {
           {snapshot.band === "danger" && <BreakTheSpellBanner suggestion={suggestion} />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-5">
-            <div className="rounded-2xl border border-border-subtle bg-background-card p-5 flex items-center justify-center">
+            <div
+              className="animate-fade-in-up flex items-center justify-center rounded-2xl border border-border-subtle bg-background-card p-5"
+              style={{ animationDelay: "60ms" }}
+            >
               <TrustMeter
                 trustScore={snapshot.trustScore}
                 band={snapshot.band}
@@ -509,7 +512,10 @@ export default function DashboardPage() {
               />
             </div>
 
-            <div className="rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]">
+            <div
+              className="animate-fade-in-up h-[420px] rounded-2xl border border-border-subtle bg-background-card p-5"
+              style={{ animationDelay: "120ms" }}
+            >
               <h2 className="mb-3 text-sm font-semibold text-foreground-muted">
                 {lang === "en" ? "Live transcript" : "Transcripción en vivo"}
               </h2>
@@ -518,7 +524,10 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="rounded-2xl border border-border-subtle bg-background-card p-5 h-[420px]">
+            <div
+              className="animate-fade-in-up h-[420px] rounded-2xl border border-border-subtle bg-background-card p-5"
+              style={{ animationDelay: "180ms" }}
+            >
               <h2 className="mb-3 text-sm font-semibold text-foreground-muted">
                 {lang === "en" ? "Explainability" : "Explicabilidad"}
               </h2>

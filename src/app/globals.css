@@ -11,6 +11,12 @@
 
   --accent: #4f8cff;
   --accent-dim: #2f5cc7;
+  /* Solid button fills need to stay dark enough for white text to pass
+     WCAG AA (4.5:1) — --accent itself is tuned to read well as light
+     text/icons on a dark background, which is the opposite requirement,
+     so filled buttons get their own pair instead of reusing it. */
+  --accent-solid: #2f5cc7;
+  --accent-solid-hover: #254aa3;
 
   --trust-safe: #22c55e;
   --trust-safe-dim: #14532d;
@@ -34,6 +40,8 @@
 
   --color-accent: var(--accent);
   --color-accent-dim: var(--accent-dim);
+  --color-accent-solid: var(--accent-solid);
+  --color-accent-solid-hover: var(--accent-solid-hover);
 
   --color-trust-safe: var(--trust-safe);
   --color-trust-safe-dim: var(--trust-safe-dim);
@@ -148,22 +156,20 @@ body.high-contrast {
   border-radius: 999px;
 }
 
-@keyframes float-blob {
+@keyframes wave-breathe {
   0%, 100% {
-    transform: translate(0, 0) scale(1);
+    transform: scaleY(1);
+    opacity: 0.55;
   }
   50% {
-    transform: translate(24px, -32px) scale(1.08);
+    transform: scaleY(1.18);
+    opacity: 0.85;
   }
 }
 
-.animate-float-blob {
-  animation: float-blob 11s ease-in-out infinite;
-}
-
-.animate-float-blob-slow {
-  animation: float-blob 15s ease-in-out infinite;
-  animation-delay: -5s;
+.animate-wave-breathe {
+  animation: wave-breathe 3.6s cubic-bezier(0.45, 0, 0.55, 1) infinite;
+  transform-origin: bottom;
 }
 
 @keyframes fade-in {
