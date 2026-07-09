@@ -7,6 +7,8 @@ import { loadReports } from "@/lib/storage";
 import { CallReport } from "@/lib/types";
 import { ChevronRightIcon } from "@/components/icons";
 import { Reveal } from "@/components/Reveal";
+import { SkeletonReportCard } from "@/components/Skeleton";
+import { EmptyState } from "@/components/EmptyState";
 
 const bandColor = {
   safe: "var(--trust-safe)",
@@ -18,12 +20,14 @@ export default function ReportsPage() {
   const { settings } = useSettings();
   const lang = settings.language;
   const [reports, setReports] = useState<CallReport[]>([]);
+  const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
     // localStorage is only available client-side, so this can't be a
     // lazy useState initializer without causing a hydration mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setReports(loadReports());
+    setLoaded(true);
   }, []);
 
   return (
@@ -35,11 +39,22 @@ export default function ReportsPage() {
           : "Los resúmenes de llamadas se guardan solo en este dispositivo."}
       </p>
 
-      {reports.length === 0 ? (
-        <div className="mt-10 rounded-2xl border border-border-subtle bg-background-card p-10 text-center text-sm text-foreground-muted">
-          {lang === "en"
-            ? "No calls yet. Run a session from the Live Monitor to generate your first report."
-            : "Aún no hay llamadas. Ejecuta una sesión desde el Monitor en vivo para generar tu primer informe."}
+      {!loaded ? (
+        <div className="mt-8 space-y-3">
+          <SkeletonReportCard />
+          <SkeletonReportCard />
+          <SkeletonReportCard />
+        </div>
+      ) : reports.length === 0 ? (
+        <div className="mt-10 rounded-2xl border border-border-subtle bg-background-card">
+          <EmptyState
+            title={lang === "en" ? "No calls yet" : "Aún no hay llamadas"}
+            description={
+              lang === "en"
+                ? "Run a session from the Live Monitor to generate your first report."
+                : "Ejecuta una sesión desde el Monitor en vivo para generar tu primer informe."
+            }
+          />
         </div>
       ) : (
         <div className="mt-8 space-y-3">

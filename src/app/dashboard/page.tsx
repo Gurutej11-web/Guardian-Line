@@ -368,6 +368,9 @@ export default function DashboardPage() {
       voiceSamples: session.voiceSamples,
       safeWordChallenged: session.safeWordChallenged,
       safeWordPassed: session.safeWordPassed,
+      tags: [],
+      notes: "",
+      feedback: null,
     };
     saveReport(report);
     setMode("idle");

@@ -10,6 +10,7 @@ import {
 } from "@/lib/audioForensics";
 import { VoiceFeatureSample } from "@/lib/types";
 import { WaveformIcon } from "@/components/icons";
+import { Tooltip } from "@/components/Tooltip";
 
 type Status = "idle" | "recording" | "analyzing" | "done" | "error";
 
@@ -28,10 +29,22 @@ function scoreColor(score: number) {
   return "var(--trust-safe)";
 }
 
-function MetricRow({ label, value, suffix = "" }: { label: string; value: string; suffix?: string }) {
+function MetricRow({
+  label,
+  value,
+  suffix = "",
+  hint,
+}: {
+  label: string;
+  value: string;
+  suffix?: string;
+  hint?: string;
+}) {
   return (
     <div className="flex items-center justify-between text-xs">
-      <span className="text-foreground-muted">{label}</span>
+      <span className="text-foreground-muted">
+        {hint ? <Tooltip text={hint}>{label}</Tooltip> : label}
+      </span>
       <span className="tabular-nums font-medium">
         {value}
         {suffix}
@@ -78,10 +91,40 @@ function ResultCard({
             </div>
           </div>
           <div className="mt-4 space-y-1.5 rounded-xl bg-background-elevated p-3">
-            <MetricRow label={lang === "en" ? "Pitch jitter" : "Jitter de tono"} value={slot.result.pitchJitterPct.toFixed(2)} suffix="%" />
-            <MetricRow label={lang === "en" ? "Amplitude shimmer" : "Shimmer de amplitud"} value={slot.result.shimmerPct.toFixed(2)} suffix="%" />
-            <MetricRow label={lang === "en" ? "Spectral flatness" : "Planitud espectral"} value={slot.result.spectralFlatness.toFixed(3)} />
-            <MetricRow label={lang === "en" ? "Mean pitch" : "Tono medio"} value={Math.round(slot.result.meanPitchHz).toString()} suffix=" Hz" />
+            <MetricRow
+              label={lang === "en" ? "Pitch jitter" : "Jitter de tono"}
+              value={slot.result.pitchJitterPct.toFixed(2)}
+              suffix="%"
+              hint={
+                lang === "en"
+                  ? "Frame-to-frame variation in pitch period. Real human voices always have a little; near-zero jitter is a synthetic tell."
+                  : "Variación del período de tono entre cuadros. Las voces humanas siempre tienen algo; un jitter casi nulo es señal de síntesis."
+              }
+            />
+            <MetricRow
+              label={lang === "en" ? "Amplitude shimmer" : "Shimmer de amplitud"}
+              value={slot.result.shimmerPct.toFixed(2)}
+              suffix="%"
+              hint={
+                lang === "en"
+                  ? "Frame-to-frame variation in loudness. Very low, mechanically-regular shimmer suggests a non-human source."
+                  : "Variación del volumen entre cuadros. Un shimmer muy bajo y mecánicamente regular sugiere una fuente no humana."
+              }
+            />
+            <MetricRow
+              label={lang === "en" ? "Spectral flatness" : "Planitud espectral"}
+              value={slot.result.spectralFlatness.toFixed(3)}
+              hint={
+                lang === "en"
+                  ? "How 'peaky' vs. 'flat' the frequency spectrum is. Closer to 0 means tonal/formant-rich; closer to 1 means noise-like."
+                  : "Qué tan 'pico' o 'plano' es el espectro de frecuencia. Cerca de 0 es tonal; cerca de 1 es como ruido."
+              }
+            />
+            <MetricRow
+              label={lang === "en" ? "Mean pitch" : "Tono medio"}
+              value={Math.round(slot.result.meanPitchHz).toString()}
+              suffix=" Hz"
+            />
           </div>
           <div className="mt-4 flex gap-2">
             {onPlay && (

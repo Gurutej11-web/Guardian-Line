@@ -76,6 +76,9 @@ export interface CallReport {
   voiceSamples: VoiceFeatureSample[];
   safeWordChallenged: boolean;
   safeWordPassed: boolean | null;
+  tags: string[];
+  notes: string;
+  feedback: "helpful" | "not-helpful" | null;
 }
 
 export interface FamilyContact {
@@ -83,6 +86,22 @@ export interface FamilyContact {
   name: string;
   method: "sms" | "push" | "email";
   contactValue: string;
+  notifyThreshold: "caution" | "danger";
+}
+
+export type Theme = "dark" | "light";
+export type ColorMode = "standard" | "colorblind-safe";
+
+export interface SafeWordEntry {
+  id: string;
+  label: string;
+  phrase: string;
+}
+
+export interface VoiceBaseline {
+  meanPitchHz: number;
+  spectralFlatness: number;
+  capturedAt: string;
 }
 
 export interface AppSettings {
@@ -94,5 +113,17 @@ export interface AppSettings {
   largeText: boolean;
   familyCircleEnabled: boolean;
   familyContacts: FamilyContact[];
+  /** @deprecated use safeWords instead; kept only for reading old saved data */
   safeWord: string | null;
+  safeWords: SafeWordEntry[];
+  theme: Theme;
+  colorMode: ColorMode;
+  reducedTransparency: boolean;
+  accentHue: string;
+  dyslexiaFont: boolean;
+  voiceBaseline: VoiceBaseline | null;
+  llmApiKey: string;
+  llmEndpoint: string;
+  hasSeenOnboarding: boolean;
+  sensitivityNudge: number;
 }

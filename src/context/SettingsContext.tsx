@@ -34,7 +34,24 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     document.body.classList.toggle("high-contrast", settings.highContrast);
     document.body.classList.toggle("large-text", settings.largeText);
-  }, [settings.highContrast, settings.largeText]);
+    document.body.classList.toggle("theme-light", settings.theme === "light");
+    document.body.classList.toggle("colorblind-safe", settings.colorMode === "colorblind-safe");
+    document.body.classList.toggle("reduced-transparency", settings.reducedTransparency);
+    document.body.classList.toggle("dyslexia-font", settings.dyslexiaFont);
+    if (settings.theme !== "light" && !settings.highContrast) {
+      document.documentElement.style.setProperty("--accent", settings.accentHue);
+    } else {
+      document.documentElement.style.removeProperty("--accent");
+    }
+  }, [
+    settings.highContrast,
+    settings.largeText,
+    settings.theme,
+    settings.colorMode,
+    settings.reducedTransparency,
+    settings.dyslexiaFont,
+    settings.accentHue,
+  ]);
 
   const updateSettings = (patch: Partial<AppSettings>) => {
     setSettings((prev) => ({ ...prev, ...patch }));

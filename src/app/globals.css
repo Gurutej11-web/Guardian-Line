@@ -114,6 +114,74 @@ body.high-contrast {
   --trust-danger: #ff4d4d;
 }
 
+/* Light theme — a genuinely separate palette, not an inverted dark
+   theme, so text/border contrast is tuned for a bright background. */
+body.theme-light {
+  color-scheme: light;
+  --background: #f5f7fb;
+  --background-elevated: #ffffff;
+  --background-card: #ffffff;
+  --foreground: #101728;
+  --foreground-muted: #576078;
+  --border-subtle: #dfe4ee;
+  --border-strong: #c3cbdd;
+
+  --accent: #2f5cc7;
+  --accent-dim: #1f3f8f;
+  --accent-solid: #2f5cc7;
+  --accent-solid-hover: #1f3f8f;
+
+  --trust-safe: #158a44;
+  --trust-safe-dim: #d7f3e2;
+  --trust-caution: #b3690a;
+  --trust-caution-dim: #fbe8cc;
+  --trust-danger: #c9302c;
+  --trust-danger-dim: #fadada;
+}
+
+/* Colorblind-safe mode swaps the red/green trust semantics for a
+   blue/orange pairing (deuteranopia and protanopia both preserve this
+   hue separation far better than red vs. green). */
+body.colorblind-safe {
+  --trust-safe: #3d8bfd;
+  --trust-safe-dim: #0d2f66;
+  --trust-caution: #f2b705;
+  --trust-caution-dim: #6b5100;
+  --trust-danger: #f2711d;
+  --trust-danger-dim: #6b3105;
+}
+
+body.reduced-transparency .backdrop-blur-md,
+body.reduced-transparency [class*="backdrop-blur"] {
+  backdrop-filter: none !important;
+}
+
+body.reduced-transparency [class*="/10"],
+body.reduced-transparency [class*="/15"],
+body.reduced-transparency [class*="/20"],
+body.reduced-transparency [class*="/40"] {
+  opacity: 1;
+}
+
+body.dyslexia-font,
+body.dyslexia-font * {
+  font-family: "Comic Sans MS", "Comic Sans", var(--font-sans), sans-serif !important;
+  letter-spacing: 0.02em;
+}
+
+/* Subtle film-grain texture so the dark background reads as a designed
+   surface rather than a flat CSS fill. */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+}
+
 @keyframes pulse-ring {
   0% {
     box-shadow: 0 0 0 0 color-mix(in srgb, var(--ring-color, var(--trust-safe)) 55%, transparent);
@@ -154,6 +222,23 @@ body.high-contrast {
 .scrollbar-thin::-webkit-scrollbar-thumb {
   background: var(--border-strong);
   border-radius: 999px;
+}
+
+html {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border-strong) transparent;
+}
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 999px;
+  border: 2px solid var(--background);
 }
 
 @keyframes wave-breathe {

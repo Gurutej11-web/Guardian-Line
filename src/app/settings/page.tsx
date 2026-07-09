@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
-import { clearAllData } from "@/lib/storage";
-import { FamilyContact } from "@/lib/types";
+import { clearAllData, exportSettingsFile, parseImportedSettings } from "@/lib/storage";
+import { defaultSettings } from "@/lib/storage";
+import { FamilyContact, SafeWordEntry } from "@/lib/types";
 import { KeyIcon, LockIcon, UsersIcon } from "@/components/icons";
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -31,22 +32,57 @@ function Section({
   description,
   children,
   delayMs = 0,
+  onReset,
+  resetLabel,
+  match,
 }: {
   title: string;
   description?: string;
   children: React.ReactNode;
   delayMs?: number;
+  onReset?: () => void;
+  resetLabel?: string;
+  match: boolean;
 }) {
+  if (!match) return null;
   return (
     <section
       className="card-hover animate-fade-in-up rounded-2xl border border-border-subtle bg-background-card p-6"
       style={{ animationDelay: `${delayMs}ms` }}
     >
-      <h2 className="font-semibold">{title}</h2>
+      <div className="flex items-start justify-between gap-3">
+        <h2 className="font-semibold">{title}</h2>
+        {onReset && (
+          <button onClick={onReset} className="shrink-0 text-xs text-foreground-muted underline hover:text-foreground">
+            {resetLabel}
+          </button>
+        )}
+      </div>
       {description && <p className="mt-1 text-xs text-foreground-muted">{description}</p>}
       <div className="mt-5">{children}</div>
     </section>
   );
+}
+
+function safeWordStrength(phrase: string, lang: "en" | "es"): { label: string; color: string } | null {
+  const trimmed = phrase.trim();
+  if (!trimmed) return null;
+  const common = ["password", "12345", "letmein", "abc123", "safe word", "palabra segura"];
+  const weak = trimmed.length < 6 || /^\d+$/.test(trimmed) || common.includes(trimmed.toLowerCase());
+  if (weak) {
+    return { label: lang === "en" ? "Weak — pick something less guessable" : "Débil — elige algo menos adivinable", color: "var(--trust-danger)" };
+  }
+  if (trimmed.length < 10) {
+    return { label: lang === "en" ? "Okay" : "Aceptable", color: "var(--trust-caution)" };
+  }
+  return { label: lang === "en" ? "Strong" : "Fuerte", color: "var(--trust-safe)" };
+}
+
+function isValidContactValue(method: FamilyContact["method"], value: string): boolean {
+  const v = value.trim();
+  if (method === "email") return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  if (method === "sms") return /^\+?[0-9()\-.\s]{7,}$/.test(v);
+  return v.length > 0;
 }
 
 export default function SettingsPage() {
@@ -54,28 +90,60 @@ export default function SettingsPage() {
   const { showToast } = useToast();
   const lang = settings.language;
 
-  const [safeWordInput, setSafeWordInput] = useState(settings.safeWord ?? "");
+  const [search, setSearch] = useState("");
+  const [safeWordLabel, setSafeWordLabel] = useState("");
+  const [safeWordInput, setSafeWordInput] = useState("");
   const [contactName, setContactName] = useState("");
   const [contactMethod, setContactMethod] = useState<FamilyContact["method"]>("sms");
   const [contactValue, setContactValue] = useState("");
+  const [contactThreshold, setContactThreshold] = useState<FamilyContact["notifyThreshold"]>("danger");
+  const [contactError, setContactError] = useState<string | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
 
-  function saveSafeWord() {
-    updateSettings({ safeWord: safeWordInput.trim() || null });
-    showToast(
-      safeWordInput.trim()
-        ? lang === "en" ? "Safe word saved" : "Palabra segura guardada"
-        : lang === "en" ? "Safe word cleared" : "Palabra segura eliminada",
-      "success"
-    );
+  const q = search.trim().toLowerCase();
+  const matches = (...text: string[]) => !q || text.some((t) => t.toLowerCase().includes(q));
+
+  const strength = useMemo(() => safeWordStrength(safeWordInput, lang), [safeWordInput, lang]);
+
+  function addSafeWord() {
+    if (!safeWordInput.trim()) return;
+    const entry: SafeWordEntry = {
+      id: `safeword-${Date.now()}`,
+      label: safeWordLabel.trim() || (lang === "en" ? "Family" : "Familia"),
+      phrase: safeWordInput.trim(),
+    };
+    updateSettings({ safeWords: [...settings.safeWords, entry] });
+    setSafeWordLabel("");
+    setSafeWordInput("");
+    showToast(lang === "en" ? "Safe word saved" : "Palabra segura guardada", "success");
+  }
+
+  function removeSafeWord(id: string) {
+    updateSettings({ safeWords: settings.safeWords.filter((s) => s.id !== id) });
+    showToast(lang === "en" ? "Safe word removed" : "Palabra segura eliminada");
   }
 
   function addContact() {
     if (!contactName.trim() || !contactValue.trim()) return;
+    if (!isValidContactValue(contactMethod, contactValue)) {
+      setContactError(
+        contactMethod === "email"
+          ? lang === "en" ? "That doesn't look like a valid email." : "Eso no parece un correo válido."
+          : lang === "en" ? "That doesn't look like a valid phone number." : "Eso no parece un número válido."
+      );
+      return;
+    }
+    if (settings.familyContacts.some((c) => c.contactValue.trim().toLowerCase() === contactValue.trim().toLowerCase())) {
+      setContactError(lang === "en" ? "That contact is already in your Family Circle." : "Ese contacto ya está en tu Círculo familiar.");
+      return;
+    }
+    setContactError(null);
     const newContact: FamilyContact = {
       id: `contact-${Date.now()}`,
       name: contactName.trim(),
       method: contactMethod,
       contactValue: contactValue.trim(),
+      notifyThreshold: contactThreshold,
     };
     updateSettings({ familyContacts: [...settings.familyContacts, newContact] });
     setContactName("");
@@ -88,6 +156,18 @@ export default function SettingsPage() {
     showToast(lang === "en" ? "Contact removed" : "Contacto eliminado");
   }
 
+  function handleImportFile(file: File) {
+    file.text().then((raw) => {
+      const parsed = parseImportedSettings(raw);
+      if (!parsed) {
+        showToast(lang === "en" ? "That file couldn't be read as settings." : "No se pudo leer ese archivo como configuración.", "danger");
+        return;
+      }
+      updateSettings(parsed);
+      showToast(lang === "en" ? "Settings imported" : "Configuración importada", "success");
+    });
+  }
+
   return (
     <div className="mx-auto w-full max-w-2xl flex-1 px-5 py-10">
       <h1 className="text-2xl font-semibold tracking-tight">{strings.nav.settings}</h1>
@@ -97,8 +177,19 @@ export default function SettingsPage() {
           : "Ajusta la sensibilidad de Guardian Line y configura tu red de seguridad familiar."}
       </p>
 
-      <div className="mt-8 space-y-5">
-        <Section title={lang === "en" ? "Language" : "Idioma"} delayMs={0}>
+      <input
+        value={search}
+        onChange={(e) => setSearch(e.target.value)}
+        placeholder={lang === "en" ? "Search settings…" : "Buscar configuración…"}
+        className="mt-6 w-full rounded-full border border-border-subtle bg-background-elevated px-4 py-2.5 text-sm outline-none focus:border-accent"
+      />
+
+      <div className="mt-6 space-y-5">
+        <Section
+          title={lang === "en" ? "Language" : "Idioma"}
+          delayMs={0}
+          match={matches(lang === "en" ? "Language" : "Idioma", "english", "español")}
+        >
           <div className="flex gap-2">
             {(["en", "es"] as const).map((l) => (
               <button
@@ -115,13 +206,72 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          delayMs={60}
+          delayMs={40}
+          title={lang === "en" ? "Appearance" : "Apariencia"}
+          description={lang === "en" ? "Theme, color mode, and readability." : "Tema, modo de color y legibilidad."}
+          match={matches("Appearance", "Apariencia", "theme", "tema", "color", "font", "fuente")}
+          resetLabel={lang === "en" ? "Reset" : "Restablecer"}
+          onReset={() =>
+            updateSettings({
+              theme: defaultSettings.theme,
+              colorMode: defaultSettings.colorMode,
+              reducedTransparency: defaultSettings.reducedTransparency,
+              dyslexiaFont: defaultSettings.dyslexiaFont,
+              accentHue: defaultSettings.accentHue,
+            })
+          }
+        >
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm font-medium">{lang === "en" ? "Light theme" : "Tema claro"}</div>
+              <Toggle
+                checked={settings.theme === "light"}
+                onChange={(v) => updateSettings({ theme: v ? "light" : "dark" })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium">{lang === "en" ? "Colorblind-safe palette" : "Paleta segura para daltonismo"}</div>
+                <p className="text-xs text-foreground-muted">
+                  {lang === "en" ? "Swaps red/green for blue/orange in the Trust Meter." : "Cambia rojo/verde por azul/naranja en el medidor."}
+                </p>
+              </div>
+              <Toggle
+                checked={settings.colorMode === "colorblind-safe"}
+                onChange={(v) => updateSettings({ colorMode: v ? "colorblind-safe" : "standard" })}
+              />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm font-medium">{lang === "en" ? "Reduce transparency" : "Reducir transparencia"}</div>
+              <Toggle checked={settings.reducedTransparency} onChange={(v) => updateSettings({ reducedTransparency: v })} />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm font-medium">{lang === "en" ? "Dyslexia-friendly font" : "Fuente para dislexia"}</div>
+              <Toggle checked={settings.dyslexiaFont} onChange={(v) => updateSettings({ dyslexiaFont: v })} />
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <div className="text-sm font-medium">{lang === "en" ? "Accent color" : "Color de acento"}</div>
+              <input
+                type="color"
+                value={settings.accentHue}
+                onChange={(e) => updateSettings({ accentHue: e.target.value })}
+                className="h-8 w-12 cursor-pointer rounded border border-border-strong bg-transparent"
+              />
+            </div>
+          </div>
+        </Section>
+
+        <Section
+          delayMs={80}
           title={lang === "en" ? "Sensitivity" : "Sensibilidad"}
           description={
             lang === "en"
               ? "Higher sensitivity flags risk earlier, but may raise more false positives."
               : "Una mayor sensibilidad marca el riesgo antes, pero puede generar más falsos positivos."
           }
+          resetLabel={lang === "en" ? "Reset" : "Restablecer"}
+          onReset={() => updateSettings({ sensitivity: defaultSettings.sensitivity })}
+          match={matches("Sensitivity", "Sensibilidad")}
         >
           <input
             type="range"
@@ -138,7 +288,11 @@ export default function SettingsPage() {
           </div>
         </Section>
 
-        <Section delayMs={120} title={lang === "en" ? "Privacy & accessibility" : "Privacidad y accesibilidad"}>
+        <Section
+          delayMs={120}
+          title={lang === "en" ? "Privacy & accessibility" : "Privacidad y accesibilidad"}
+          match={matches("Privacy", "Privacidad", "accessibility", "accesibilidad", "contrast", "contraste", "text", "texto")}
+        >
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-start gap-3">
@@ -184,46 +338,67 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          delayMs={180}
+          delayMs={160}
           title={strings.safeWord.title}
           description={
             lang === "en"
-              ? "A private phrase only your family knows. Guardian Line will prompt you to ask for it if a call turns risky."
-              : "Una frase privada que solo tu familia conoce. Se te pedirá solicitarla si una llamada se vuelve riesgosa."
+              ? "A private phrase only your family knows. Register one per relative if you'd like — Guardian Line will prompt for it if a call turns risky."
+              : "Una frase privada que solo tu familia conoce. Registra una por familiar si quieres — se te pedirá si una llamada se vuelve riesgosa."
           }
+          match={matches(strings.safeWord.title, "safe word", "palabra segura")}
         >
-          <div className="flex items-center gap-2">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15">
-              <KeyIcon className="h-4 w-4 text-accent" />
+          <div className="space-y-3">
+            {settings.safeWords.map((s) => (
+              <div key={s.id} className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2 text-sm">
+                <div>
+                  <span className="font-medium">{s.label}</span>{" "}
+                  <span className="font-mono text-xs text-foreground-muted">“{s.phrase}”</span>
+                </div>
+                <button onClick={() => removeSafeWord(s.id)} className="text-xs text-trust-danger">
+                  {lang === "en" ? "Remove" : "Eliminar"}
+                </button>
+              </div>
+            ))}
+            <div className="flex items-center gap-2">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15">
+                <KeyIcon className="h-4 w-4 text-accent" />
+              </div>
+              <input
+                value={safeWordLabel}
+                onChange={(e) => setSafeWordLabel(e.target.value)}
+                placeholder={lang === "en" ? "Who's this for? (optional)" : "¿Para quién es? (opcional)"}
+                className="w-28 shrink-0 rounded-lg border border-border-subtle bg-background-elevated px-2 py-2 text-xs outline-none focus:border-accent"
+              />
+              <input
+                value={safeWordInput}
+                onChange={(e) => setSafeWordInput(e.target.value)}
+                placeholder={lang === "en" ? "e.g. Blue Umbrella" : "ej. Paraguas Azul"}
+                className="flex-1 rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+              <button
+                onClick={addSafeWord}
+                className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
+              >
+                {lang === "en" ? "Save" : "Guardar"}
+              </button>
             </div>
-            <input
-              value={safeWordInput}
-              onChange={(e) => setSafeWordInput(e.target.value)}
-              placeholder={lang === "en" ? "e.g. Blue Umbrella" : "ej. Paraguas Azul"}
-              className="flex-1 rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
-            />
-            <button
-              onClick={saveSafeWord}
-              className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
-            >
-              {lang === "en" ? "Save" : "Guardar"}
-            </button>
+            {strength && (
+              <p className="text-xs" style={{ color: strength.color }}>
+                {strength.label}
+              </p>
+            )}
           </div>
-          {settings.safeWord && (
-            <p className="mt-2 text-xs text-trust-safe">
-              {lang === "en" ? "Safe word is set." : "La palabra segura está configurada."}
-            </p>
-          )}
         </Section>
 
         <Section
-          delayMs={240}
+          delayMs={200}
           title={strings.familyCircle.title}
           description={
             lang === "en"
-              ? "With your consent, a trusted contact can be notified in real time if a call crosses a high-risk threshold."
-              : "Con tu consentimiento, un contacto de confianza puede ser notificado en tiempo real si una llamada cruza un umbral de alto riesgo."
+              ? "With your consent, a trusted contact can be notified in real time if a call crosses your chosen threshold."
+              : "Con tu consentimiento, un contacto de confianza puede ser notificado en tiempo real si una llamada cruza el umbral elegido."
           }
+          match={matches(strings.familyCircle.title, "family circle", "círculo familiar", "contact", "contacto")}
         >
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
@@ -242,7 +417,11 @@ export default function SettingsPage() {
                   <div>
                     <span className="font-medium">{c.name}</span>{" "}
                     <span className="text-xs text-foreground-muted">
-                      ({c.method} · {c.contactValue})
+                      ({c.method} · {c.contactValue} ·{" "}
+                      {c.notifyThreshold === "danger"
+                        ? lang === "en" ? "danger only" : "solo peligro"
+                        : lang === "en" ? "caution+" : "precaución+"}
+                      )
                     </span>
                   </div>
                   <button onClick={() => removeContact(c.id)} className="text-xs text-trust-danger">
@@ -251,7 +430,7 @@ export default function SettingsPage() {
                 </div>
               ))}
 
-              <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_1fr_auto] gap-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 <input
                   value={contactName}
                   onChange={(e) => setContactName(e.target.value)}
@@ -273,18 +452,67 @@ export default function SettingsPage() {
                   placeholder={lang === "en" ? "Phone or email" : "Teléfono o correo"}
                   className="rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
                 />
-                <button
-                  onClick={addContact}
-                  className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
+                <select
+                  value={contactThreshold}
+                  onChange={(e) => setContactThreshold(e.target.value as FamilyContact["notifyThreshold"])}
+                  className="rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
                 >
-                  {lang === "en" ? "Add" : "Añadir"}
-                </button>
+                  <option value="danger">{lang === "en" ? "Notify at danger only" : "Notificar solo en peligro"}</option>
+                  <option value="caution">{lang === "en" ? "Notify at caution or higher" : "Notificar en precaución o más"}</option>
+                </select>
               </div>
+              {contactError && <p className="text-xs text-trust-danger">{contactError}</p>}
+              <button
+                onClick={addContact}
+                className="btn-press w-full rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
+              >
+                {lang === "en" ? "Add contact" : "Añadir contacto"}
+              </button>
             </div>
           )}
         </Section>
 
-        <Section delayMs={300} title={lang === "en" ? "Data" : "Datos"}>
+        <Section
+          delayMs={240}
+          title={lang === "en" ? "Backup" : "Copia de seguridad"}
+          description={
+            lang === "en"
+              ? "Export your settings to a file, or restore them on another device."
+              : "Exporta tu configuración a un archivo, o restáurala en otro dispositivo."
+          }
+          match={matches("Backup", "Copia de seguridad", "export", "exportar", "import", "importar")}
+        >
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => exportSettingsFile(settings)}
+              className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
+            >
+              {lang === "en" ? "Export settings" : "Exportar configuración"}
+            </button>
+            <button
+              onClick={() => importInputRef.current?.click()}
+              className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
+            >
+              {lang === "en" ? "Import settings" : "Importar configuración"}
+            </button>
+            <input
+              ref={importInputRef}
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) handleImportFile(file);
+              }}
+            />
+          </div>
+        </Section>
+
+        <Section
+          delayMs={280}
+          title={lang === "en" ? "Data" : "Datos"}
+          match={matches("Data", "Datos", "clear", "borrar")}
+        >
           <button
             onClick={() => {
               if (confirm(lang === "en" ? "Clear all settings and saved reports on this device?" : "¿Borrar toda la configuración e informes guardados en este dispositivo?")) {
