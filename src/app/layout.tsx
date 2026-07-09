@@ -34,10 +34,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[100] focus:rounded-full focus:bg-accent-solid focus:px-4 focus:py-2 focus:text-sm focus:font-semibold focus:text-white"
+        >
+          Skip to content
+        </a>
         <SettingsProvider>
           <ToastProvider>
             <Header />
-            <main className="flex-1 flex flex-col">
+            <main id="main-content" className="flex-1 flex flex-col">
               <PageTransition>{children}</PageTransition>
             </main>
             <footer className="border-t border-border-subtle py-6">

@@ -62,6 +62,7 @@ interface SessionData {
   snapshot: TrustSnapshot;
   safeWordChallenged: boolean;
   safeWordPassed: boolean | null;
+  lastAnnouncedBand: TrustSnapshot["band"] | null;
 }
 
 function emptySession(mode: Mode, scenarioId: string): SessionData {
@@ -75,7 +76,25 @@ function emptySession(mode: Mode, scenarioId: string): SessionData {
     snapshot: initialSnapshot,
     safeWordChallenged: false,
     safeWordPassed: null,
+    lastAnnouncedBand: null,
   };
+}
+
+/** Calm-mode voice guidance: speaks band transitions aloud for anyone
+ * who can't look at the screen mid-call. Deliberately terse and only
+ * fires on a genuine state change, not on every score tick, so it
+ * reads as guidance rather than a stream of noise. */
+function speakCalmAlert(band: TrustSnapshot["band"], lang: "en" | "es") {
+  if (typeof window === "undefined" || !window.speechSynthesis) return;
+  const phrases: Record<TrustSnapshot["band"], { en: string; es: string }> = {
+    safe: { en: "This call still looks safe.", es: "Esta llamada todavía parece segura." },
+    caution: { en: "Stay alert. Something about this call looks risky.", es: "Mantente alerta. Algo en esta llamada parece riesgoso." },
+    danger: { en: "High risk detected. Consider hanging up and calling back on a known number.", es: "Riesgo alto detectado. Considera colgar y volver a llamar a un número conocido." },
+  };
+  const utter = new SpeechSynthesisUtterance(phrases[band][lang]);
+  utter.lang = lang === "en" ? "en-US" : "es-ES";
+  utter.rate = 0.95;
+  window.speechSynthesis.speak(utter);
 }
 
 export default function DashboardPage() {
@@ -259,7 +278,8 @@ export default function DashboardPage() {
     setSnapshot(newSnapshot);
 
     if (newSnapshot.band === "danger") {
-      if (settings.safeWord && !sessionRef.current.safeWordChallenged) {
+      const hasSafeWord = settings.safeWords.length > 0 || !!settings.safeWord;
+      if (hasSafeWord && !sessionRef.current.safeWordChallenged) {
         sessionRef.current.safeWordChallenged = true;
         setSafeWordModalOpen(true);
       }
@@ -268,6 +288,11 @@ export default function DashboardPage() {
         setFamilyAlertVisible(true);
         setTimeout(() => setFamilyAlertVisible(false), 6000);
       }
+    }
+
+    if (settings.calmVoiceGuidance && newSnapshot.band !== sessionRef.current.lastAnnouncedBand) {
+      sessionRef.current.lastAnnouncedBand = newSnapshot.band;
+      speakCalmAlert(newSnapshot.band, lang);
     }
   }
 

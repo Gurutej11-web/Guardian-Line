@@ -90,6 +90,13 @@ export function TrustMeter({
         {strings.trustMeter[bandLabelKey[band]]}
       </div>
 
+      {/* Screen-reader-only live region — announces every score change
+          politely, but switches to assertive (interrupts) once risk
+          actually crosses into the danger band. */}
+      <div className="sr-only" aria-live={band === "danger" ? "assertive" : "polite"} role="status">
+        {strings.trustMeter.title}: {Math.round(trustScore)}. {strings.trustMeter[bandLabelKey[band]]}.
+      </div>
+
       <div className="mt-5 w-full max-w-[260px] space-y-3">
         <MeterBar icon={WaveformIcon} label={strings.trustMeter.voiceAuth} value={voiceAuthScore} />
         <MeterBar icon={AlertIcon} label={strings.trustMeter.transcriptRisk} value={transcriptRiskScore} />

@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { KeyIcon } from "./icons";
 
@@ -17,14 +18,43 @@ function vibrate(pattern: number | number[]) {
 export function SafeWordModal({ onResolve, onSkip }: SafeWordModalProps) {
   const { settings, strings } = useSettings();
   const words = settings.safeWords.length > 0 ? settings.safeWords : settings.safeWord ? [{ id: "legacy", label: strings.appName, phrase: settings.safeWord }] : [];
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    if (!dialog) return;
+    const focusable = dialog.querySelectorAll<HTMLElement>("button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])");
+    focusable[0]?.focus();
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.key !== "Tab" || focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    dialog.addEventListener("keydown", onKeyDown);
+    return () => dialog.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4">
-      <div className="animate-fade-in-up w-full max-w-sm rounded-2xl border border-border-strong bg-background-card p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-4" role="presentation">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="safe-word-title"
+        className="animate-fade-in-up w-full max-w-sm rounded-2xl border border-border-strong bg-background-card p-6 shadow-2xl"
+      >
         <div className="flex h-11 w-11 items-center justify-center rounded-full bg-accent/15">
           <KeyIcon className="h-5 w-5 text-accent" />
         </div>
-        <h3 className="mt-4 text-lg font-semibold">{strings.safeWord.title}</h3>
+        <h3 id="safe-word-title" className="mt-4 text-lg font-semibold">{strings.safeWord.title}</h3>
         <p className="mt-2 text-sm leading-relaxed text-foreground-muted">
           {strings.safeWord.prompt}
         </p>

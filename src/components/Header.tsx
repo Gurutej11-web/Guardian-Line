@@ -49,7 +49,7 @@ export function Header() {
         <div className="flex items-center gap-2">
           <button
             onClick={() => updateSettings({ language: settings.language === "en" ? "es" : "en" })}
-            className="btn-press rounded-full border border-border-subtle px-3 py-1.5 text-xs font-medium text-foreground-muted hover:border-border-strong hover:text-foreground"
+            className="btn-press flex min-h-[44px] min-w-[44px] items-center justify-center rounded-full border border-border-subtle px-3 py-1.5 text-xs font-medium text-foreground-muted hover:border-border-strong hover:text-foreground"
             aria-label="Toggle language"
           >
             {settings.language === "en" ? "EN" : "ES"}
