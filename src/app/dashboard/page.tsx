@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSettings } from "@/context/SettingsContext";
+import { useToast } from "@/context/ToastContext";
 import { TrustMeter } from "@/components/TrustMeter";
 import { TranscriptView } from "@/components/TranscriptView";
 import { ExplainabilityPanel } from "@/components/ExplainabilityPanel";
@@ -78,7 +79,8 @@ function emptySession(mode: Mode, scenarioId: string): SessionData {
 }
 
 export default function DashboardPage() {
-  const { settings, strings } = useSettings();
+  const { settings, updateSettings, strings } = useSettings();
+  const { showToast } = useToast();
   const router = useRouter();
   const lang = settings.language;
 
@@ -96,6 +98,11 @@ export default function DashboardPage() {
 
   const [safeWordModalOpen, setSafeWordModalOpen] = useState(false);
   const [familyAlertVisible, setFamilyAlertVisible] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const pausedRef = useRef(false);
+  const pausedAccumRef = useRef(0);
+  const pauseStartRef = useRef(0);
+  const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const familyAlertShownRef = useRef(false);
 
   const sessionRef = useRef<SessionData>(emptySession("idle", demoScenarios[0].id));
@@ -114,7 +121,82 @@ export default function DashboardPage() {
     return () => {
       stopEverything();
     };
+    // stopEverything only closes over refs, not state, so it never goes
+    // stale between renders — safe to omit from the dependency array.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // If the tab closed or crashed mid-call last time, the "in progress"
+  // flag never got cleared — let the user know their previous session
+  // wasn't cleanly saved, rather than silently losing it without a trace.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem("guardianline.callInProgress") === "1") {
+      showToast(
+        lang === "en"
+          ? "Your previous call session was interrupted before it could be saved."
+          : "Tu sesión de llamada anterior se interrumpió antes de poder guardarse.",
+        "danger"
+      );
+      window.sessionStorage.removeItem("guardianline.callInProgress");
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keyboard shortcuts: Space ends the active call, Escape dismisses the
+  // Safe Word prompt. Ignored while focus is in a text field so typing
+  // isn't hijacked.
+  useEffect(() => {
+    function onKeyDown(e: KeyboardEvent) {
+      const target = e.target as HTMLElement | null;
+      const isTyping = target && ["INPUT", "TEXTAREA", "SELECT"].includes(target.tagName);
+      if (isTyping) return;
+      if (e.code === "Space" && callActive) {
+        e.preventDefault();
+        endCall();
+      } else if (e.key === "Escape" && safeWordModalOpen) {
+        setSafeWordModalOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callActive, safeWordModalOpen]);
+
+  function computeElapsed(): number {
+    // While paused, freeze at the moment pause started rather than
+    // continuing to tick — pausedAccumRef only accounts for *past*
+    // pauses, not the one currently in progress.
+    const now = pausedRef.current ? pauseStartRef.current : Date.now();
+    return now - startTimeRef.current - pausedAccumRef.current;
+  }
+
+  async function acquireWakeLock() {
+    try {
+      const nav = navigator as Navigator & { wakeLock?: { request: (type: "screen") => Promise<{ release: () => Promise<void> }> } };
+      wakeLockRef.current = (await nav.wakeLock?.request("screen")) ?? null;
+    } catch {
+      wakeLockRef.current = null;
+    }
+  }
+
+  function releaseWakeLock() {
+    wakeLockRef.current?.release().catch(() => {});
+    wakeLockRef.current = null;
+  }
+
+  function togglePause() {
+    setPaused((p) => {
+      const next = !p;
+      pausedRef.current = next;
+      if (next) {
+        pauseStartRef.current = Date.now();
+      } else {
+        pausedAccumRef.current += Date.now() - pauseStartRef.current;
+      }
+      return next;
+    });
+  }
 
   function stopEverything() {
     micCaptureRef.current?.stop();
@@ -126,6 +208,7 @@ export default function DashboardPage() {
     if (tickerRef.current) clearInterval(tickerRef.current);
     tickerRef.current = null;
     window.speechSynthesis?.cancel();
+    releaseWakeLock();
   }
 
   function resetSessionState(nextMode: Mode, nextScenarioId: string) {
@@ -143,6 +226,10 @@ export default function DashboardPage() {
     interimEntryIdRef.current = null;
     setMicError(null);
     setMicReady(false);
+    setPaused(false);
+    pausedRef.current = false;
+    pausedAccumRef.current = 0;
+    pauseStartRef.current = 0;
   }
 
   function pushFlags(newFlags: RiskFlag[]) {
@@ -200,9 +287,14 @@ export default function DashboardPage() {
     resetSessionState("live-mic", scenarioId);
     setMode("live-mic");
     setCallActive(true);
+    window.sessionStorage.setItem("guardianline.callInProgress", "1");
     startTimeRef.current = Date.now();
     setElapsedMs(0);
-    tickerRef.current = setInterval(() => setElapsedMs(Date.now() - startTimeRef.current), 500);
+    tickerRef.current = setInterval(
+      () => setElapsedMs(computeElapsed()),
+      500
+    );
+    acquireWakeLock();
 
     if (!isLiveTranscriptionSupported()) {
       setMicError(
@@ -216,6 +308,7 @@ export default function DashboardPage() {
     micCaptureRef.current = capture;
     try {
       await capture.start((sample) => {
+        if (pausedRef.current) return;
         pushVoiceSample(sample);
         voiceAuthRef.current = sample.syntheticProbability;
         if (!baselineSampleRef.current) baselineSampleRef.current = sample;
@@ -241,6 +334,7 @@ export default function DashboardPage() {
     transcriber.start(
       lang,
       (text, isFinal, timestampMs) => {
+        if (pausedRef.current) return;
         const list = [...sessionRef.current.transcript];
         if (!isFinal) {
           if (interimEntryIdRef.current) {
@@ -285,12 +379,18 @@ export default function DashboardPage() {
     const scenario = demoScenarios.find((s) => s.id === scenarioId) ?? demoScenarios[0];
     setMode("scripted");
     setCallActive(true);
+    window.sessionStorage.setItem("guardianline.callInProgress", "1");
     startTimeRef.current = Date.now();
     setElapsedMs(0);
-    tickerRef.current = setInterval(() => setElapsedMs(Date.now() - startTimeRef.current), 500);
+    tickerRef.current = setInterval(
+      () => setElapsedMs(computeElapsed()),
+      500
+    );
+    acquireWakeLock();
 
     scenario.lines.forEach((line) => {
       const timeout = setTimeout(() => {
+        if (pausedRef.current) return;
         const entryId = newId("t");
         const text = line.text[lang];
 
@@ -348,6 +448,7 @@ export default function DashboardPage() {
   function endCall() {
     stopEverything();
     setCallActive(false);
+    window.sessionStorage.removeItem("guardianline.callInProgress");
     const session = sessionRef.current;
 
     const report: CallReport = {
@@ -447,8 +548,21 @@ export default function DashboardPage() {
                     checked={scenarioId === s.id}
                     onChange={() => setScenarioId(s.id)}
                   />
-                  <div>
-                    <div className="text-sm font-medium">{s.name[lang]}</div>
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{s.name[lang]}</span>
+                      <span
+                        className="rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                        style={{
+                          color: s.riskLevel === "benign" ? "var(--trust-safe)" : "var(--trust-danger)",
+                          backgroundColor: `color-mix(in srgb, ${s.riskLevel === "benign" ? "var(--trust-safe)" : "var(--trust-danger)"} 16%, transparent)`,
+                        }}
+                      >
+                        {s.riskLevel === "benign"
+                          ? lang === "en" ? "control" : "control"
+                          : lang === "en" ? "high risk" : "alto riesgo"}
+                      </span>
+                    </div>
                     <div className="mt-0.5 text-xs text-foreground-muted">{s.description[lang]}</div>
                   </div>
                 </label>
@@ -473,22 +587,44 @@ export default function DashboardPage() {
         <div className="flex flex-col gap-5">
           <div className="animate-fade-in-up flex items-center justify-between rounded-2xl border border-border-subtle bg-background-card px-5 py-3">
             <div className="flex items-center gap-2 text-sm">
-              <span className="relative flex h-2.5 w-2.5">
-                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-trust-danger opacity-60" />
-                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-trust-danger" />
-              </span>
-              {mode === "live-mic"
+              {paused ? (
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-trust-caution" />
+              ) : (
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-trust-danger opacity-60" />
+                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-trust-danger" />
+                </span>
+              )}
+              {paused
+                ? lang === "en" ? "Paused" : "Pausado"
+                : mode === "live-mic"
                 ? lang === "en" ? "Live call" : "Llamada en vivo"
                 : demoScenarios.find((s) => s.id === scenarioId)?.name[lang]}
               <span className="tabular-nums text-foreground-muted">{elapsedLabel}</span>
             </div>
-            <button
-              onClick={endCall}
-              className="btn-press rounded-full bg-trust-danger px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
-            >
-              {lang === "en" ? "End call" : "Terminar llamada"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={togglePause}
+                className="btn-press rounded-full border border-border-strong px-4 py-1.5 text-sm font-semibold hover:bg-background-elevated"
+              >
+                {paused ? (lang === "en" ? "Resume" : "Reanudar") : (lang === "en" ? "Pause" : "Pausar")}
+              </button>
+              <button
+                onClick={endCall}
+                className="btn-press rounded-full bg-trust-danger px-4 py-1.5 text-sm font-semibold text-white hover:opacity-90"
+              >
+                {lang === "en" ? "End call" : "Terminar llamada"}
+              </button>
+            </div>
           </div>
+
+          {elapsedMs > 15 * 60 * 1000 && (
+            <div className="animate-fade-in-up rounded-xl border border-trust-caution/40 bg-trust-caution/10 px-4 py-3 text-sm text-trust-caution">
+              {lang === "en"
+                ? "This call has run over 15 minutes. If anything about it still feels off, it's okay to end it."
+                : "Esta llamada lleva más de 15 minutos. Si algo todavía te parece raro, está bien terminarla."}
+            </div>
+          )}
 
           {mode === "live-mic" && micReady && (
             <div className="animate-fade-in-up flex items-center gap-3 rounded-2xl border border-border-subtle bg-background-card px-5 py-3">
@@ -509,26 +645,52 @@ export default function DashboardPage() {
           {snapshot.band === "danger" && <BreakTheSpellBanner suggestion={suggestion} />}
 
           <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] gap-5">
-            <div
-              className="animate-fade-in-up flex items-center justify-center rounded-2xl border border-border-subtle bg-background-card p-5"
-              style={{ animationDelay: "60ms" }}
-            >
-              <TrustMeter
-                trustScore={snapshot.trustScore}
-                band={snapshot.band}
-                voiceAuthScore={snapshot.voiceAuthScore}
-                transcriptRiskScore={snapshot.transcriptRiskScore}
-                size={200}
-              />
+            <div className="flex flex-col gap-3">
+              <div
+                className="animate-fade-in-up flex items-center justify-center rounded-2xl border border-border-subtle bg-background-card p-5"
+                style={{ animationDelay: "60ms" }}
+              >
+                <TrustMeter
+                  trustScore={snapshot.trustScore}
+                  band={snapshot.band}
+                  voiceAuthScore={snapshot.voiceAuthScore}
+                  transcriptRiskScore={snapshot.transcriptRiskScore}
+                  size={200}
+                />
+              </div>
+              <div
+                className="animate-fade-in-up rounded-2xl border border-border-subtle bg-background-card p-4"
+                style={{ animationDelay: "90ms" }}
+              >
+                <div className="flex items-center justify-between text-xs text-foreground-muted">
+                  <span>{lang === "en" ? "Sensitivity" : "Sensibilidad"}</span>
+                  <span className="tabular-nums">{settings.sensitivity}</span>
+                </div>
+                <input
+                  type="range"
+                  min={0}
+                  max={100}
+                  value={settings.sensitivity}
+                  onChange={(e) => updateSettings({ sensitivity: Number(e.target.value) })}
+                  className="mt-1 w-full accent-[var(--accent)]"
+                />
+              </div>
             </div>
 
             <div
               className="animate-fade-in-up h-[420px] rounded-2xl border border-border-subtle bg-background-card p-5"
               style={{ animationDelay: "120ms" }}
             >
-              <h2 className="mb-3 text-sm font-semibold text-foreground-muted">
-                {lang === "en" ? "Live transcript" : "Transcripción en vivo"}
-              </h2>
+              <div className="mb-3 flex items-center justify-between">
+                <h2 className="text-sm font-semibold text-foreground-muted">
+                  {lang === "en" ? "Live transcript" : "Transcripción en vivo"}
+                </h2>
+                {mode === "scripted" && (
+                  <span className="text-[10px] text-foreground-muted">
+                    {lang === "en" ? "Wavy underlines = why it's risky" : "Subrayado ondulado = por qué es riesgoso"}
+                  </span>
+                )}
+              </div>
               <div className="h-[calc(100%-2rem)]">
                 <TranscriptView entries={transcript} />
               </div>
@@ -555,6 +717,7 @@ export default function DashboardPage() {
             sessionRef.current.safeWordPassed = passed;
             setSafeWordModalOpen(false);
           }}
+          onSkip={() => setSafeWordModalOpen(false)}
         />
       )}
       {familyAlertVisible && (

@@ -5,6 +5,7 @@ import { KeyIcon } from "./icons";
 
 interface SafeWordModalProps {
   onResolve: (passed: boolean) => void;
+  onSkip?: () => void;
 }
 
 function vibrate(pattern: number | number[]) {
@@ -13,7 +14,7 @@ function vibrate(pattern: number | number[]) {
   }
 }
 
-export function SafeWordModal({ onResolve }: SafeWordModalProps) {
+export function SafeWordModal({ onResolve, onSkip }: SafeWordModalProps) {
   const { settings, strings } = useSettings();
   const words = settings.safeWords.length > 0 ? settings.safeWords : settings.safeWord ? [{ id: "legacy", label: strings.appName, phrase: settings.safeWord }] : [];
 
@@ -55,6 +56,14 @@ export function SafeWordModal({ onResolve }: SafeWordModalProps) {
           >
             {settings.language === "en" ? "They couldn't answer" : "No pudieron responder"}
           </button>
+          {onSkip && (
+            <button
+              onClick={onSkip}
+              className="mt-1 text-xs text-foreground-muted underline hover:text-foreground"
+            >
+              {settings.language === "en" ? "Skip — I already know this is them" : "Omitir — ya sé que es esta persona"}
+            </button>
+          )}
         </div>
       </div>
     </div>
