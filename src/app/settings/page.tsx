@@ -323,6 +323,15 @@ export default function SettingsPage() {
           delayMs={120}
           title={lang === "en" ? "Privacy & accessibility" : "Privacidad y accesibilidad"}
           match={matches("Privacy", "Privacidad", "accessibility", "accesibilidad", "contrast", "contraste", "text", "texto")}
+          resetLabel={lang === "en" ? "Reset" : "Restablecer"}
+          onReset={() =>
+            updateSettings({
+              privacyMode: defaultSettings.privacyMode,
+              calmVoiceGuidance: defaultSettings.calmVoiceGuidance,
+              highContrast: defaultSettings.highContrast,
+              largeText: defaultSettings.largeText,
+            })
+          }
         >
           <div className="space-y-4">
             <div className="flex items-center justify-between gap-4">
