@@ -275,6 +275,56 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="border-t border-border-subtle">
+        <div className="mx-auto max-w-3xl px-5 py-20">
+          <Reveal className="text-center">
+            <span className="text-xs font-semibold uppercase tracking-wider text-foreground-muted">
+              {lang === "en" ? "Illustrative example, not a real call" : "Ejemplo ilustrativo, no una llamada real"}
+            </span>
+            <h2 className="mt-3 text-3xl font-semibold tracking-tight">
+              {lang === "en" ? "What it looks like in the moment" : "Cómo se ve en el momento"}
+            </h2>
+          </Reveal>
+          <div className="mt-10 space-y-4">
+            {[
+              {
+                t: "0:08",
+                en: "Trust Meter sits calmly around 90 — the call opens like any normal one.",
+                es: "El medidor está tranquilo alrededor de 90 — la llamada comienza como cualquier otra.",
+                band: "safe" as const,
+              },
+              {
+                t: "0:25",
+                en: "\"Don't tell mom and dad\" is flagged as an isolation tactic. Score drifts to caution.",
+                es: "\"No le digas a mamá y papá\" se marca como táctica de aislamiento. La puntuación baja a precaución.",
+                band: "caution" as const,
+              },
+              {
+                t: "0:49",
+                en: "A gift-card payment request stacks on top of the urgency already flagged. Score drops into danger — Break the Spell and the Safe Word prompt both appear.",
+                es: "Una solicitud de pago con tarjetas de regalo se suma a la urgencia ya marcada. La puntuación cae a peligro.",
+                band: "danger" as const,
+              },
+            ].map((step) => (
+              <Reveal key={step.t} delayMs={80}>
+                <div className="card-hover flex items-start gap-4 rounded-2xl border border-border-subtle bg-background-card p-5">
+                  <div
+                    className="mt-0.5 shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold tabular-nums"
+                    style={{
+                      color: `var(--trust-${step.band})`,
+                      backgroundColor: `color-mix(in srgb, var(--trust-${step.band}) 16%, transparent)`,
+                    }}
+                  >
+                    {step.t}
+                  </div>
+                  <p className="text-sm leading-relaxed text-foreground-muted">{lang === "en" ? step.en : step.es}</p>
+                </div>
+              </Reveal>
+            ))}
+          </div>
+        </div>
+      </section>
+
       <section className="mx-auto max-w-6xl px-5 py-20 text-center">
         <Reveal>
           <h2 className="text-3xl font-semibold tracking-tight">

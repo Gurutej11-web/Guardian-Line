@@ -4,9 +4,11 @@ import "./globals.css";
 import { SettingsProvider } from "@/context/SettingsContext";
 import { ToastProvider } from "@/context/ToastContext";
 import { Header } from "@/components/Header";
+import { Footer } from "@/components/Footer";
 import { PageTransition } from "@/components/PageTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
+import { ChangelogGate } from "@/components/ChangelogGate";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -48,14 +50,10 @@ export default function RootLayout({
             <main id="main-content" className="flex-1 flex flex-col">
               <PageTransition>{children}</PageTransition>
             </main>
-            <footer className="border-t border-border-subtle py-6">
-              <div className="mx-auto max-w-6xl px-5 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-foreground-muted">
-                <span>© {new Date().getFullYear()} Guardian Line. Not a substitute for professional fraud guidance.</span>
-                <span>Privacy-first: voice analysis runs on-device.</span>
-              </div>
-            </footer>
+            <Footer />
             <ScrollToTop />
             <ServiceWorkerRegistration />
+            <ChangelogGate />
           </ToastProvider>
         </SettingsProvider>
       </body>

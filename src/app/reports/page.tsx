@@ -4,8 +4,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
-import { deleteReports, loadReports } from "@/lib/storage";
+import { deleteReports, loadReports, saveReport } from "@/lib/storage";
 import { CallReport, TrustBand } from "@/lib/types";
+import { buildSampleReport } from "@/lib/sampleReport";
 import { ChevronRightIcon } from "@/components/icons";
 import { Reveal } from "@/components/Reveal";
 import { SkeletonReportCard } from "@/components/Skeleton";
@@ -189,6 +190,18 @@ export default function ReportsPage() {
                 : "Ejecuta una sesión desde el Monitor en vivo para generar tu primer informe."
             }
           />
+          <div className="pb-8 text-center">
+            <button
+              onClick={() => {
+                saveReport(buildSampleReport(lang));
+                setReports(loadReports());
+                showToast(lang === "en" ? "Sample report added" : "Informe de muestra añadido", "success");
+              }}
+              className="btn-press text-xs text-accent underline hover:no-underline"
+            >
+              {lang === "en" ? "Or load a sample report to see what one looks like" : "O carga un informe de muestra para ver cómo se ve"}
+            </button>
+          </div>
         </div>
       ) : filtered.length === 0 ? (
         <p className="mt-10 text-center text-sm text-foreground-muted">
