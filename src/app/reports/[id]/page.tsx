@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
@@ -116,6 +116,37 @@ export default function ReportDetailPage() {
   const trustValues = report.trustHistory.map((h) => h.trustScore);
   const color = bandColor[report.finalBand];
 
+  return <ReportBody report={report} lang={lang} strings={strings} showToast={showToast} trustValues={trustValues} color={color} />;
+}
+
+function ReportBody({
+  report,
+  lang,
+  strings,
+  showToast,
+  trustValues,
+  color,
+}: {
+  report: CallReport;
+  lang: "en" | "es";
+  strings: ReturnType<typeof import("@/lib/i18n").t>;
+  showToast: (message: string, variant?: "default" | "success" | "danger") => void;
+  trustValues: number[];
+  color: string;
+}) {
+  const pathRef = useRef<SVGPathElement>(null);
+
+  useEffect(() => {
+    const el = pathRef.current;
+    if (!el) return;
+    const length = el.getTotalLength();
+    el.style.strokeDasharray = `${length}`;
+    el.style.strokeDashoffset = `${length}`;
+    el.getBoundingClientRect(); // force reflow so the transition actually plays
+    el.style.transition = "stroke-dashoffset 1.1s cubic-bezier(0.22, 1, 0.36, 1)";
+    el.style.strokeDashoffset = "0";
+  }, [trustValues.length]);
+
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10 print:max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -160,8 +191,14 @@ export default function ReportDetailPage() {
       </div>
 
       <div className="card-hover animate-fade-in-up mt-8 grid grid-cols-1 sm:grid-cols-[auto_1fr] gap-6 rounded-2xl border border-border-subtle bg-background-card p-6">
-        <div className="flex flex-col items-center justify-center">
-          <div className="text-4xl font-bold tabular-nums" style={{ color }}>
+        <div className="relative flex flex-col items-center justify-center">
+          {report.finalBand === "safe" && (
+            <div
+              className="animate-celebrate-glow pointer-events-none absolute inset-0 rounded-full"
+              style={{ boxShadow: `0 0 40px 10px color-mix(in srgb, ${color} 35%, transparent)` }}
+            />
+          )}
+          <div className="animate-settle-bounce text-4xl font-bold tabular-nums" style={{ color }}>
             {report.finalTrustScore}
           </div>
           <div
@@ -177,7 +214,7 @@ export default function ReportDetailPage() {
           </div>
           {trustValues.length > 1 ? (
             <svg viewBox="0 0 300 60" className="w-full h-16" preserveAspectRatio="none">
-              <path d={sparklinePath(trustValues, 300, 60)} fill="none" stroke={color} strokeWidth={2} />
+              <path ref={pathRef} d={sparklinePath(trustValues, 300, 60)} fill="none" stroke={color} strokeWidth={2} />
             </svg>
           ) : (
             <div className="text-xs text-foreground-muted">

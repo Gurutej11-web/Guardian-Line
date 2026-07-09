@@ -5,6 +5,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { Reveal } from "@/components/Reveal";
 import { AnimatedCounter } from "@/components/AnimatedCounter";
 import { AmbientWaveform } from "@/components/AmbientWaveform";
+import { ParallaxLayer } from "@/components/ParallaxLayer";
 import {
   AlertIcon,
   CheckIcon,
@@ -97,10 +98,12 @@ export default function Home() {
       <section className="relative overflow-hidden border-b border-border-subtle">
         <div className="pointer-events-none absolute inset-0 -z-10 overflow-hidden">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,_var(--accent-dim)_0%,_transparent_65%)] opacity-20" />
-          <AmbientWaveform
-            className="absolute inset-x-0 bottom-0 h-40 opacity-[0.14] [mask-image:linear-gradient(to_top,black,transparent)] sm:h-56"
-            barCount={72}
-          />
+          <ParallaxLayer speed={0.15} className="absolute inset-x-0 bottom-0 h-40 sm:h-56">
+            <AmbientWaveform
+              className="h-full opacity-[0.14] [mask-image:linear-gradient(to_top,black,transparent)]"
+              barCount={72}
+            />
+          </ParallaxLayer>
         </div>
         <div className="mx-auto max-w-6xl px-5 pt-20 pb-24 sm:pt-28 sm:pb-32">
           <div className="mx-auto max-w-3xl text-center">

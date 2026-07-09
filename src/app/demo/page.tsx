@@ -156,6 +156,11 @@ function ResultCard({
               ? lang === "en" ? "Analyzing…" : "Analizando…"
               : primaryLabel}
           </button>
+          {slot.status === "analyzing" && (
+            <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-background-elevated">
+              <div className="h-full w-1/3 animate-[progress-sweep_1.1s_ease-in-out_infinite] rounded-full bg-accent" />
+            </div>
+          )}
           {slot.status === "error" && slot.error && (
             <p className="mt-2 text-xs text-trust-danger">{slot.error}</p>
           )}

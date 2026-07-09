@@ -374,7 +374,13 @@ export default function DashboardPage() {
     };
     saveReport(report);
     setMode("idle");
-    router.push(`/reports/${report.id}`);
+    const navigate = () => router.push(`/reports/${report.id}`);
+    const docWithTransition = document as Document & { startViewTransition?: (cb: () => void) => void };
+    if (docWithTransition.startViewTransition) {
+      docWithTransition.startViewTransition(navigate);
+    } else {
+      navigate();
+    }
   }
 
   const suggestion = pickBreakTheSpellSuggestion(lang, Math.floor(elapsedMs / 1000));

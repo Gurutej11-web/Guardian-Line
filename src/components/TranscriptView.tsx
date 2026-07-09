@@ -98,6 +98,9 @@ export function TranscriptView({ entries }: { entries: TranscriptEntry[] }) {
             · {formatTime(entry.timestampMs)}
           </div>
           <HighlightedText entry={entry} lang={settings.language} />
+          {!entry.isFinal && (
+            <span className="animate-blink-cursor ml-0.5 inline-block h-3.5 w-[2px] translate-y-0.5 bg-foreground-muted" />
+          )}
         </div>
       ))}
       <div ref={bottomRef} />
