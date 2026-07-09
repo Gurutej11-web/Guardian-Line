@@ -24,15 +24,29 @@ const entries: { version: string; en: string[]; es: string[] }[] = [
   },
 ];
 
+/** Stamps the changelog as seen without showing it — used when a
+ * first-time user finishes (or skips) onboarding, since walking through
+ * onboarding already covers what's new for someone who's never used the
+ * app before. Without this, a brand-new user would see the onboarding
+ * modal immediately followed by an unrelated "what's new" modal. */
+export function markChangelogSeen() {
+  window.localStorage.setItem(STORAGE_KEY, CURRENT_VERSION);
+}
+
 export function useChangelogVisible() {
+  const { settings } = useSettings();
   const [visible, setVisible] = useState(false);
   useEffect(() => {
+    // Never show the changelog to someone who hasn't finished onboarding
+    // yet — re-runs once hydration resolves hasSeenOnboarding to its
+    // real stored value, so returning users are still shown updates.
+    if (!settings.hasSeenOnboarding) return;
     const lastSeen = window.localStorage.getItem(STORAGE_KEY);
     // localStorage is only available client-side, so this can't be a
     // lazy useState initializer without causing a hydration mismatch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     if (lastSeen !== CURRENT_VERSION) setVisible(true);
-  }, []);
+  }, [settings.hasSeenOnboarding]);
   return [visible, setVisible] as const;
 }
 

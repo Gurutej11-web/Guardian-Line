@@ -11,6 +11,7 @@ import { BreakTheSpellBanner } from "@/components/BreakTheSpellBanner";
 import { SafeWordModal } from "@/components/SafeWordModal";
 import { FamilyCircleAlert } from "@/components/FamilyCircleAlert";
 import { OnboardingModal } from "@/components/OnboardingModal";
+import { markChangelogSeen } from "@/components/ChangelogModal";
 import { PhoneIcon, WaveformIcon } from "@/components/icons";
 import { AudioLevelBars } from "@/components/AudioLevelBars";
 import { LiveMicCapture } from "@/lib/audioForensics";
@@ -770,7 +771,12 @@ export default function DashboardPage() {
         <FamilyCircleAlert contactNames={settings.familyContacts.map((c) => c.name)} />
       )}
       {!callActive && !settings.hasSeenOnboarding && (
-        <OnboardingModal onClose={() => updateSettings({ hasSeenOnboarding: true })} />
+        <OnboardingModal
+          onClose={() => {
+            updateSettings({ hasSeenOnboarding: true });
+            markChangelogSeen();
+          }}
+        />
       )}
     </div>
   );

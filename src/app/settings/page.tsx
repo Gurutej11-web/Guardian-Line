@@ -583,28 +583,32 @@ export default function SettingsPage() {
                 </button>
               </div>
             ))}
-            <div className="flex items-center gap-2">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15">
-                <KeyIcon className="h-4 w-4 text-accent" />
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <div className="flex items-center gap-2">
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-accent/15">
+                  <KeyIcon className="h-4 w-4 text-accent" />
+                </div>
+                <input
+                  value={safeWordLabel}
+                  onChange={(e) => setSafeWordLabel(e.target.value)}
+                  placeholder={lang === "en" ? "Who's this for? (optional)" : "¿Para quién es? (opcional)"}
+                  className="w-full min-w-0 rounded-lg border border-border-subtle bg-background-elevated px-2 py-2 text-xs outline-none focus:border-accent sm:w-28 sm:shrink-0"
+                />
               </div>
-              <input
-                value={safeWordLabel}
-                onChange={(e) => setSafeWordLabel(e.target.value)}
-                placeholder={lang === "en" ? "Who's this for? (optional)" : "¿Para quién es? (opcional)"}
-                className="w-28 shrink-0 rounded-lg border border-border-subtle bg-background-elevated px-2 py-2 text-xs outline-none focus:border-accent"
-              />
-              <input
-                value={safeWordInput}
-                onChange={(e) => setSafeWordInput(e.target.value)}
-                placeholder={lang === "en" ? "e.g. Blue Umbrella" : "ej. Paraguas Azul"}
-                className="flex-1 rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
-              />
-              <button
-                onClick={addSafeWord}
-                className="btn-press rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
-              >
-                {lang === "en" ? "Save" : "Guardar"}
-              </button>
+              <div className="flex gap-2">
+                <input
+                  value={safeWordInput}
+                  onChange={(e) => setSafeWordInput(e.target.value)}
+                  placeholder={lang === "en" ? "e.g. Blue Umbrella" : "ej. Paraguas Azul"}
+                  className="min-w-0 flex-1 rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+                />
+                <button
+                  onClick={addSafeWord}
+                  className="btn-press shrink-0 rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
+                >
+                  {lang === "en" ? "Save" : "Guardar"}
+                </button>
+              </div>
             </div>
             {strength && (
               <p className="text-xs" style={{ color: strength.color }}>

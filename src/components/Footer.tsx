@@ -30,8 +30,16 @@ export function Footer() {
           ))}
         </nav>
         <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-foreground-muted">
-          <span>© {new Date().getFullYear()} Guardian Line. Not a substitute for professional fraud guidance.</span>
-          <span>Privacy-first: voice analysis runs on-device.</span>
+          <span>
+            ©{" "}
+            {new Date().getFullYear()}{" "}
+            {lang === "en"
+              ? "Guardian Line. Not a substitute for professional fraud guidance."
+              : "Guardian Line. No sustituye la orientación profesional contra el fraude."}
+          </span>
+          <span>
+            {lang === "en" ? "Privacy-first: voice analysis runs on-device." : "Privacidad primero: el análisis de voz se ejecuta en el dispositivo."}
+          </span>
         </div>
       </div>
     </footer>
