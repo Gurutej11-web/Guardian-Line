@@ -188,12 +188,17 @@ export class VoiceForensicsAnalyzer {
     if (this.periodHistory.length < 4) return null;
 
     let jitterSum = 0;
+    const jitterSamples: number[] = [];
     for (let i = 1; i < this.periodHistory.length; i++) {
-      jitterSum +=
-        Math.abs(this.periodHistory[i] - this.periodHistory[i - 1]) /
-        this.periodHistory[i - 1];
+      const j = Math.abs(this.periodHistory[i] - this.periodHistory[i - 1]) / this.periodHistory[i - 1];
+      jitterSum += j;
+      jitterSamples.push(j);
     }
     const jitterPct = (jitterSum / (this.periodHistory.length - 1)) * 100;
+    const jitterMean = jitterSum / Math.max(1, jitterSamples.length);
+    const jitterVariance =
+      jitterSamples.reduce((acc, j) => acc + (j - jitterMean) ** 2, 0) / Math.max(1, jitterSamples.length);
+    const jitterStdDevPct = Math.sqrt(jitterVariance) * 100;
 
     let shimmerSum = 0;
     for (let i = 1; i < this.ampHistory.length; i++) {
@@ -214,9 +219,16 @@ export class VoiceForensicsAnalyzer {
       flatness: meanFlatness,
     });
 
+    // Fewer voiced frames or noisier jitter readings mean the estimate
+    // rests on less/shakier evidence — widen the displayed range rather
+    // than presenting a single point value with false precision.
+    const sampleSizeSpread = Math.max(0, 20 - this.periodHistory.length) * 0.8;
+    const confidenceRange = Math.min(30, Math.round(jitterStdDevPct * 4 + sampleSizeSpread));
+
     const sample: VoiceFeatureSample = {
       timestampMs,
       syntheticProbability,
+      confidenceRange,
       pitchJitterPct: jitterPct,
       shimmerPct,
       spectralFlatness: meanFlatness,
@@ -248,11 +260,10 @@ export function checkSpeakerConsistency(
   return { shiftDetected: driftScore > 0.35, driftScore };
 }
 
-/** Analyzes an entire pre-recorded/decoded AudioBuffer in one pass by
- * sliding a frame across it, returning the final aggregate sample. */
-export function analyzeAudioBufferFull(buffer: AudioBuffer): VoiceFeatureSample | null {
-  const data = buffer.getChannelData(0);
-  const sampleRate = buffer.sampleRate;
+/** Pure-data version of the full-buffer analysis — takes raw channel
+ * samples rather than an AudioBuffer so it can run inside a Web Worker
+ * (AudioBuffer itself isn't transferable to a worker; a Float32Array is). */
+export function analyzeChannelDataFull(data: Float32Array, sampleRate: number): VoiceFeatureSample | null {
   const hop = Math.floor(FRAME_SIZE / 2);
   const analyzer = new VoiceForensicsAnalyzer(80);
   let last: VoiceFeatureSample | null = null;
@@ -264,6 +275,12 @@ export function analyzeAudioBufferFull(buffer: AudioBuffer): VoiceFeatureSample 
     if (result) last = result;
   }
   return last;
+}
+
+/** Analyzes an entire pre-recorded/decoded AudioBuffer in one pass by
+ * sliding a frame across it, returning the final aggregate sample. */
+export function analyzeAudioBufferFull(buffer: AudioBuffer): VoiceFeatureSample | null {
+  return analyzeChannelDataFull(buffer.getChannelData(0), buffer.sampleRate);
 }
 
 /** Captures live microphone audio and periodically emits forensics samples. */

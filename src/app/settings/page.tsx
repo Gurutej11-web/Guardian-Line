@@ -6,6 +6,8 @@ import { useToast } from "@/context/ToastContext";
 import { clearAllData, exportSettingsFile, parseImportedSettings } from "@/lib/storage";
 import { defaultSettings } from "@/lib/storage";
 import { FamilyContact, SafeWordEntry } from "@/lib/types";
+import { classifyWithLlm } from "@/lib/llmClassifier";
+import { classifyText } from "@/lib/scamClassifier";
 import { KeyIcon, LockIcon, UsersIcon } from "@/components/icons";
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
@@ -98,6 +100,9 @@ export default function SettingsPage() {
   const [contactValue, setContactValue] = useState("");
   const [contactThreshold, setContactThreshold] = useState<FamilyContact["notifyThreshold"]>("danger");
   const [contactError, setContactError] = useState<string | null>(null);
+  const [llmTestText, setLlmTestText] = useState("");
+  const [llmTestResult, setLlmTestResult] = useState<string | null>(null);
+  const [llmTesting, setLlmTesting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
 
   const q = search.trim().toLowerCase();
@@ -154,6 +159,32 @@ export default function SettingsPage() {
   function removeContact(id: string) {
     updateSettings({ familyContacts: settings.familyContacts.filter((c) => c.id !== id) });
     showToast(lang === "en" ? "Contact removed" : "Contacto eliminado");
+  }
+
+  async function testLlmClassifier() {
+    if (!llmTestText.trim()) return;
+    setLlmTesting(true);
+    setLlmTestResult(null);
+    const heuristic = classifyText(llmTestText, lang);
+    const llm = await classifyWithLlm(llmTestText, lang, settings.llmApiKey, settings.llmEndpoint);
+    setLlmTesting(false);
+    const heuristicSummary = heuristic.length
+      ? heuristic.map((m) => `${m.category} (${m.severity}): "${m.phrase}"`).join("; ")
+      : lang === "en" ? "no matches" : "sin coincidencias";
+    if (llm === null) {
+      setLlmTestResult(
+        (lang === "en" ? "Heuristic: " : "Heurística: ") +
+          heuristicSummary +
+          (lang === "en"
+            ? "\n\nLLM: not configured or request failed — falling back to heuristic only."
+            : "\n\nLLM: no configurado o falló la solicitud — usando solo la heurística.")
+      );
+      return;
+    }
+    const llmSummary = llm.length
+      ? llm.map((m) => `${m.category} (${m.severity}): "${m.phrase}"`).join("; ")
+      : lang === "en" ? "no matches" : "sin coincidencias";
+    setLlmTestResult(`${lang === "en" ? "Heuristic" : "Heurística"}: ${heuristicSummary}\n\nLLM: ${llmSummary}`);
   }
 
   function handleImportFile(file: File) {
@@ -509,7 +540,51 @@ export default function SettingsPage() {
         </Section>
 
         <Section
-          delayMs={280}
+          delayMs={260}
+          title={lang === "en" ? "LLM classifier (experimental)" : "Clasificador LLM (experimental)"}
+          description={
+            lang === "en"
+              ? "Bring your own OpenAI-compatible API key to compare an LLM classification against the built-in offline heuristic. Never used in a live call unless you wire it in yourself — this is a side-by-side tester."
+              : "Usa tu propia clave de API compatible con OpenAI para comparar una clasificación LLM contra la heurística incorporada. Solo es un comparador de prueba."
+          }
+          match={matches("LLM", "classifier", "clasificador", "api key")}
+        >
+          <div className="space-y-3">
+            <input
+              value={settings.llmApiKey}
+              onChange={(e) => updateSettings({ llmApiKey: e.target.value })}
+              placeholder={lang === "en" ? "API key (stored only in this browser)" : "Clave API (solo en este navegador)"}
+              type="password"
+              className="w-full rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <input
+              value={settings.llmEndpoint}
+              onChange={(e) => updateSettings({ llmEndpoint: e.target.value })}
+              placeholder="https://api.openai.com/v1/chat/completions"
+              className="w-full rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <textarea
+              value={llmTestText}
+              onChange={(e) => setLlmTestText(e.target.value)}
+              placeholder={lang === "en" ? "Paste a line of transcript to test…" : "Pega una línea de transcripción para probar…"}
+              rows={2}
+              className="w-full rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+            />
+            <button
+              onClick={testLlmClassifier}
+              disabled={llmTesting || !llmTestText.trim()}
+              className="btn-press w-full rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover disabled:opacity-50"
+            >
+              {llmTesting ? (lang === "en" ? "Testing…" : "Probando…") : lang === "en" ? "Compare classifiers" : "Comparar clasificadores"}
+            </button>
+            {llmTestResult && (
+              <pre className="whitespace-pre-wrap rounded-lg bg-background-elevated p-3 text-xs text-foreground-muted">{llmTestResult}</pre>
+            )}
+          </div>
+        </Section>
+
+        <Section
+          delayMs={300}
           title={lang === "en" ? "Data" : "Datos"}
           match={matches("Data", "Datos", "clear", "borrar")}
         >

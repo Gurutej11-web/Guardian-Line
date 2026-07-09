@@ -319,6 +319,7 @@ export default function DashboardPage() {
           const sample: VoiceFeatureSample = {
             timestampMs: line.atMs,
             syntheticProbability: line.simulatedSyntheticProbability,
+            confidenceRange: 6,
             pitchJitterPct: Math.max(0.1, 1.4 - line.simulatedSyntheticProbability / 60),
             shimmerPct: Math.max(0.5, 4.2 - line.simulatedSyntheticProbability / 20),
             spectralFlatness: 0.15 + line.simulatedSyntheticProbability / 400,

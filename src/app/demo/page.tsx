@@ -3,14 +3,15 @@
 import { useRef, useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import {
-  analyzeAudioBufferFull,
   generateSyntheticReferenceBuffer,
   playAudioBuffer,
   recordMicClip,
 } from "@/lib/audioForensics";
+import { analyzeInWorker } from "@/lib/runAnalysisWorker";
 import { VoiceFeatureSample } from "@/lib/types";
 import { WaveformIcon } from "@/components/icons";
 import { Tooltip } from "@/components/Tooltip";
+import { Spectrogram } from "@/components/Spectrogram";
 
 type Status = "idle" | "recording" | "analyzing" | "done" | "error";
 
@@ -85,10 +86,18 @@ function ResultCard({
           <div className="text-center">
             <div className="text-4xl font-bold tabular-nums" style={{ color: scoreColor(slot.result.syntheticProbability) }}>
               {slot.result.syntheticProbability}%
+              <span className="ml-1 text-base font-normal text-foreground-muted">± {slot.result.confidenceRange}</span>
             </div>
             <div className="text-xs text-foreground-muted">
               {lang === "en" ? "estimated synthetic probability" : "probabilidad sintética estimada"}
             </div>
+            {slot.result.voicedFrameRatio < 0.35 && (
+              <div className="mt-2 text-[11px] text-trust-caution">
+                {lang === "en"
+                  ? "Low audio quality detected — background noise or a quiet mic may widen the margin of error."
+                  : "Se detectó baja calidad de audio — el ruido de fondo o un micrófono bajo pueden ampliar el margen de error."}
+              </div>
+            )}
           </div>
           <div className="mt-4 space-y-1.5 rounded-xl bg-background-elevated p-3">
             <MetricRow
@@ -126,6 +135,14 @@ function ResultCard({
               suffix=" Hz"
             />
           </div>
+          {slot.buffer && (
+            <div className="mt-3">
+              <div className="mb-1 text-[10px] uppercase tracking-wide text-foreground-muted">
+                {lang === "en" ? "Spectrogram" : "Espectrograma"}
+              </div>
+              <Spectrogram buffer={slot.buffer} />
+            </div>
+          )}
           <div className="mt-4 flex gap-2">
             {onPlay && (
               <button
@@ -182,7 +199,7 @@ export default function DemoPage() {
     try {
       const buffer = await recordMicClip(3500);
       setYourVoice((s) => ({ ...s, status: "analyzing", buffer }));
-      const result = analyzeAudioBufferFull(buffer);
+      const result = await analyzeInWorker(buffer.getChannelData(0), buffer.sampleRate);
       setYourVoice({ status: "done", buffer, result, error: null });
     } catch {
       setYourVoice({
@@ -204,7 +221,8 @@ export default function DemoPage() {
       const ctx = new Ctx();
       const buffer = await ctx.decodeAudioData(arrayBuffer);
       await ctx.close();
-      const result = analyzeAudioBufferFull(buffer);
+      setYourVoice((s) => ({ ...s, status: "analyzing", buffer }));
+      const result = await analyzeInWorker(buffer.getChannelData(0), buffer.sampleRate);
       setYourVoice({ status: "done", buffer, result, error: null });
     } catch {
       setYourVoice({
@@ -219,7 +237,7 @@ export default function DemoPage() {
     setSynthetic({ ...emptySlot, status: "analyzing" });
     try {
       const buffer = await generateSyntheticReferenceBuffer(3);
-      const result = analyzeAudioBufferFull(buffer);
+      const result = await analyzeInWorker(buffer.getChannelData(0), buffer.sampleRate);
       setSynthetic({ status: "done", buffer, result, error: null });
       playAudioBuffer(buffer).catch(() => {});
     } catch {

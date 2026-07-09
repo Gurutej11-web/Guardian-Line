@@ -42,6 +42,11 @@ export interface TranscriptEntry {
 export interface VoiceFeatureSample {
   timestampMs: number;
   syntheticProbability: number;
+  /** ± spread around syntheticProbability, derived from how much the
+   * underlying jitter/shimmer readings vary across the analysis window —
+   * wider spread means less stable evidence, not a literal statistical
+   * confidence interval. */
+  confidenceRange: number;
   pitchJitterPct: number;
   shimmerPct: number;
   spectralFlatness: number;

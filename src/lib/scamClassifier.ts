@@ -62,6 +62,12 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bcash app|zelle|venmo\b/i, severity: "medium" },
       { pattern: /\bpost office box\b/i, severity: "low" },
       { pattern: /\bbail (money|amount)\b/i, severity: "high" },
+      // Crypto-recovery / "recover your lost funds" scams
+      { pattern: /\brecover(y)? (your |my )?(lost |stolen )?(funds|crypto|bitcoin)\b/i, severity: "high" },
+      { pattern: /\bcrypto (wallet|recovery) (seed|phrase|key)\b/i, severity: "high" },
+      { pattern: /\bseed phrase\b/i, severity: "high" },
+      { pattern: /\bremote access (to your computer|software|app)\b/i, severity: "high" },
+      { pattern: /\b(anydesk|teamviewer|any desk|team viewer)\b/i, severity: "high" },
     ],
     es: [
       { pattern: /\btransferencia bancaria\b/i, severity: "high" },
@@ -71,6 +77,9 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bnúmero de seguro social\b/i, severity: "high" },
       { pattern: /\benv(í|i)a dinero\b/i, severity: "high" },
       { pattern: /\bfianza\b/i, severity: "high" },
+      { pattern: /\brecuperar (tus |mis )?(fondos|criptomonedas)\b/i, severity: "high" },
+      { pattern: /\bacceso remoto a (tu|su) (computadora|equipo)\b/i, severity: "high" },
+      { pattern: /\bfrase semilla\b/i, severity: "high" },
     ],
   },
   isolation: {
@@ -100,6 +109,11 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bcourt (case|order)\b/i, severity: "medium" },
       { pattern: /\bofficer [a-z]+\b/i, severity: "low" },
       { pattern: /\bcustoms (and border|agent)\b/i, severity: "medium" },
+      // Tech-support-scam impersonation
+      { pattern: /\b(microsoft|apple|amazon) support\b/i, severity: "high" },
+      { pattern: /\bvirus (detected|found) on your (computer|device)\b/i, severity: "high" },
+      { pattern: /\byour (computer|account) (has been|is) compromised\b/i, severity: "high" },
+      { pattern: /\btech support\b/i, severity: "medium" },
     ],
     es: [
       { pattern: /\bsoy del banco\b/i, severity: "high" },
@@ -108,6 +122,8 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\borden de arresto\b/i, severity: "high" },
       { pattern: /\bhas sido arrestado\b/i, severity: "high" },
       { pattern: /\bagente [a-z]+\b/i, severity: "low" },
+      { pattern: /\bsoporte t(é|e)cnico\b/i, severity: "medium" },
+      { pattern: /\bvirus (detectado|encontrado) en (tu|su) (computadora|dispositivo)\b/i, severity: "high" },
     ],
   },
   "emotional-manipulation": {
@@ -119,6 +135,11 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\byou'?re the only one (who|that) can help\b/i, severity: "medium" },
       { pattern: /\bif you (really )?love me\b/i, severity: "high" },
       { pattern: /\bi'?m so sorry to ask\b/i, severity: "low" },
+      // Romance-scam framing
+      { pattern: /\bmy love,? i need\b/i, severity: "high" },
+      { pattern: /\bcan'?t (video call|video chat|show my face) (right now|yet)\b/i, severity: "medium" },
+      { pattern: /\bi'?ve never felt this way (before|about anyone)\b/i, severity: "medium" },
+      { pattern: /\bstuck (overseas|abroad|at customs)\b/i, severity: "high" },
     ],
     es: [
       { pattern: /\bestoy asustad[oa]\b/i, severity: "medium" },
@@ -126,6 +147,9 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bestoy en (problemas|la c(á|a)rcel|el hospital)\b/i, severity: "high" },
       { pattern: /\beres la (ú|u)nica persona que puede ayudarme\b/i, severity: "medium" },
       { pattern: /\bsi de verdad me quieres\b/i, severity: "high" },
+      { pattern: /\bmi amor,? necesito\b/i, severity: "high" },
+      { pattern: /\bnunca (me hab(í|i)a sentido as(í|i)|hab(í|i)a sentido esto)\b/i, severity: "medium" },
+      { pattern: /\batrapad[oa] en el extranjero\b/i, severity: "high" },
     ],
   },
 };
