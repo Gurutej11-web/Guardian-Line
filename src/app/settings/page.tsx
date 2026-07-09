@@ -1,14 +1,35 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
-import { clearAllData, exportSettingsFile, parseImportedSettings } from "@/lib/storage";
+import {
+  clearAllData,
+  exportCustomPatterns,
+  exportSettingsFile,
+  loadCustomPatterns,
+  loadReports,
+  parseImportedPatterns,
+  parseImportedSettings,
+  saveCustomPatterns,
+  suggestSensitivityNudge,
+} from "@/lib/storage";
 import { defaultSettings } from "@/lib/storage";
-import { FamilyContact, SafeWordEntry } from "@/lib/types";
+import { CallLanguage, CustomPattern, FamilyContact, FlagCategory, SafeWordEntry, Severity } from "@/lib/types";
+import { categoryLabels } from "@/lib/i18n";
 import { classifyWithLlm } from "@/lib/llmClassifier";
 import { classifyText } from "@/lib/scamClassifier";
+import { requestNotificationPermission } from "@/lib/notifications";
 import { KeyIcon, LockIcon, UsersIcon } from "@/components/icons";
+
+const callLanguageLabels: Record<CallLanguage, string> = {
+  en: "English",
+  es: "Español",
+  fr: "Français",
+  zh: "中文",
+  vi: "Tiếng Việt",
+  tl: "Tagalog",
+};
 
 function Toggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -104,6 +125,57 @@ export default function SettingsPage() {
   const [llmTestResult, setLlmTestResult] = useState<string | null>(null);
   const [llmTesting, setLlmTesting] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
+  const patternImportInputRef = useRef<HTMLInputElement>(null);
+  const [nudge, setNudge] = useState(0);
+  const [customPatterns, setCustomPatterns] = useState<CustomPattern[]>([]);
+  const [newPatternCategory, setNewPatternCategory] = useState<FlagCategory>("financial-request");
+  const [newPatternPhrase, setNewPatternPhrase] = useState("");
+  const [newPatternSeverity, setNewPatternSeverity] = useState<Severity>("medium");
+
+  useEffect(() => {
+    // Reading localStorage-backed reports/patterns is client-only, so
+    // this can't be a lazy useState initializer without an SSR/client
+    // mismatch.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setNudge(suggestSensitivityNudge(loadReports()));
+    setCustomPatterns(loadCustomPatterns());
+  }, []);
+
+  function addCustomPattern() {
+    if (!newPatternPhrase.trim()) return;
+    const entry: CustomPattern = {
+      id: `pattern-${Date.now()}`,
+      category: newPatternCategory,
+      phrase: newPatternPhrase.trim(),
+      severity: newPatternSeverity,
+    };
+    const next = [...customPatterns, entry];
+    setCustomPatterns(next);
+    saveCustomPatterns(next);
+    setNewPatternPhrase("");
+    showToast(lang === "en" ? "Pattern added" : "Patrón añadido", "success");
+  }
+
+  function removeCustomPattern(id: string) {
+    const next = customPatterns.filter((p) => p.id !== id);
+    setCustomPatterns(next);
+    saveCustomPatterns(next);
+  }
+
+  function handleImportPatternsFile(file: File) {
+    file.text().then((raw) => {
+      const parsed = parseImportedPatterns(raw);
+      if (!parsed) {
+        showToast(lang === "en" ? "That file couldn't be read as patterns." : "No se pudo leer ese archivo como patrones.", "danger");
+        return;
+      }
+      const existingPhrases = new Set(customPatterns.map((p) => p.phrase.toLowerCase()));
+      const merged = [...customPatterns, ...parsed.filter((p) => !existingPhrases.has(p.phrase.toLowerCase()))];
+      setCustomPatterns(merged);
+      saveCustomPatterns(merged);
+      showToast(lang === "en" ? `Imported ${parsed.length} pattern(s)` : `Se importaron ${parsed.length} patrón(es)`, "success");
+    });
+  }
 
   const q = search.trim().toLowerCase();
   const matches = (...text: string[]) => !q || text.some((t) => t.toLowerCase().includes(q));
@@ -159,6 +231,31 @@ export default function SettingsPage() {
   function removeContact(id: string) {
     updateSettings({ familyContacts: settings.familyContacts.filter((c) => c.id !== id) });
     showToast(lang === "en" ? "Contact removed" : "Contacto eliminado");
+  }
+
+  async function shareFamilyInvite() {
+    // There's no account system or server here, so this can't literally
+    // link two devices' Family Circles together — it shares plain-text
+    // setup instructions so a family member can independently turn on
+    // the same protection and agree on a safe word out loud.
+    const text =
+      lang === "en"
+        ? "I set up Guardian Line to catch scam calls impersonating family. Could you install it too, and let's agree on a shared safe word so we can verify it's really each other on the phone? guardianline.app"
+        : "Configuré Guardian Line para detectar llamadas de estafa que suplantan a la familia. ¿Podrías instalarlo tú también? Acordemos una palabra segura compartida para verificar que somos nosotros. guardianline.app";
+    if (typeof navigator !== "undefined" && "share" in navigator) {
+      try {
+        await navigator.share({ title: "Guardian Line", text });
+        return;
+      } catch {
+        // user cancelled the native share sheet — fall through to clipboard
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast(lang === "en" ? "Invite copied — paste it anywhere" : "Invitación copiada — pégala donde quieras", "success");
+    } catch {
+      showToast(lang === "en" ? "Couldn't copy — try again" : "No se pudo copiar — intenta de nuevo", "danger");
+    }
   }
 
   async function testLlmClassifier() {
@@ -231,6 +328,31 @@ export default function SettingsPage() {
                 }`}
               >
                 {l === "en" ? "English" : "Español"}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section
+          title={lang === "en" ? "Call language" : "Idioma de la llamada"}
+          description={
+            lang === "en"
+              ? "Language the caller is speaking, used only to match scam phrases. French, Mandarin, Vietnamese, and Tagalog cover core scam patterns but the app's own interface stays in English or Spanish."
+              : "Idioma que habla quien llama, usado solo para detectar frases de estafa. Francés, mandarín, vietnamita y tagalo cubren los patrones principales, pero la interfaz de la app sigue en inglés o español."
+          }
+          delayMs={20}
+          match={matches("Call language", "Idioma de la llamada", "French", "Francés", "Mandarin", "Vietnamese", "Tagalog")}
+        >
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(callLanguageLabels) as CallLanguage[]).map((l) => (
+              <button
+                key={l}
+                onClick={() => updateSettings({ callLanguage: l })}
+                className={`btn-press rounded-full px-4 py-2 text-sm font-medium ${
+                  settings.callLanguage === l ? "bg-accent-solid text-white" : "border border-border-strong text-foreground-muted"
+                }`}
+              >
+                {callLanguageLabels[l]}
               </button>
             ))}
           </div>
@@ -317,6 +439,39 @@ export default function SettingsPage() {
             <span className="tabular-nums">{settings.sensitivity}</span>
             <span>{lang === "en" ? "Earlier warnings" : "Alertas más tempranas"}</span>
           </div>
+          {nudge !== 0 && settings.sensitivityNudge !== nudge && (
+            <div className="mt-4 rounded-xl border border-accent/40 bg-accent/10 p-3 text-xs">
+              <p>
+                {nudge < 0
+                  ? lang === "en"
+                    ? "Your recent \"not helpful\" feedback suggests sensitivity may be a bit high. Lower it by 10?"
+                    : "Tus comentarios recientes de \"no útil\" sugieren que la sensibilidad podría ser alta. ¿Bajarla en 10?"
+                  : lang === "en"
+                  ? "Your recent feedback has been consistently positive — you could raise sensitivity by 5 to catch risk even earlier."
+                  : "Tus comentarios recientes han sido consistentemente positivos — podrías subir la sensibilidad en 5 para detectar riesgos aún antes."}
+              </p>
+              <div className="mt-2 flex gap-2">
+                <button
+                  onClick={() => {
+                    updateSettings({
+                      sensitivity: Math.min(100, Math.max(0, settings.sensitivity + nudge)),
+                      sensitivityNudge: nudge,
+                    });
+                    showToast(lang === "en" ? "Sensitivity updated" : "Sensibilidad actualizada", "success");
+                  }}
+                  className="btn-press rounded-full bg-accent-solid px-3 py-1 text-xs font-medium text-white"
+                >
+                  {lang === "en" ? "Apply" : "Aplicar"}
+                </button>
+                <button
+                  onClick={() => updateSettings({ sensitivityNudge: nudge })}
+                  className="btn-press rounded-full border border-border-strong px-3 py-1 text-xs font-medium"
+                >
+                  {lang === "en" ? "Dismiss" : "Descartar"}
+                </button>
+              </div>
+            </div>
+          )}
         </Section>
 
         <Section
@@ -363,6 +518,35 @@ export default function SettingsPage() {
                 </p>
               </div>
               <Toggle checked={settings.calmVoiceGuidance} onChange={(v) => updateSettings({ calmVoiceGuidance: v })} />
+            </div>
+
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm font-medium">
+                  {lang === "en" ? "Desktop notifications" : "Notificaciones de escritorio"}
+                </div>
+                <p className="text-xs text-foreground-muted">
+                  {lang === "en"
+                    ? "Get a system notification if a call reaches the danger band while this tab isn't focused."
+                    : "Recibe una notificación del sistema si una llamada llega a la zona de peligro mientras esta pestaña no está activa."}
+                </p>
+              </div>
+              <Toggle
+                checked={settings.desktopNotifications}
+                onChange={async (v) => {
+                  if (v) {
+                    const permission = await requestNotificationPermission();
+                    if (permission !== "granted") {
+                      showToast(
+                        lang === "en" ? "Notifications were blocked in the browser." : "Las notificaciones fueron bloqueadas en el navegador.",
+                        "danger"
+                      );
+                      return;
+                    }
+                  }
+                  updateSettings({ desktopNotifications: v });
+                }}
+              />
             </div>
 
             <div className="flex items-center justify-between gap-4">
@@ -508,8 +692,105 @@ export default function SettingsPage() {
               >
                 {lang === "en" ? "Add contact" : "Añadir contacto"}
               </button>
+              <button
+                onClick={shareFamilyInvite}
+                className="btn-press w-full rounded-lg border border-border-strong px-3 py-2 text-xs font-medium hover:bg-background-elevated"
+              >
+                {lang === "en" ? "Invite a family member to set this up too" : "Invita a un familiar a configurar esto también"}
+              </button>
             </div>
           )}
+        </Section>
+
+        <Section
+          delayMs={220}
+          title={lang === "en" ? "Community patterns" : "Patrones de la comunidad"}
+          description={
+            lang === "en"
+              ? "This build has no server, so there's no live community feed — but you can export the phrases you've flagged as a plain JSON file (no names or transcripts, just category + phrase) and import a file someone else shares with you."
+              : "Esta versión no tiene servidor, así que no hay un feed comunitario en vivo — pero puedes exportar las frases marcadas como un archivo JSON simple (sin nombres ni transcripciones, solo categoría + frase) e importar uno que alguien más te comparta."
+          }
+          match={matches("Community patterns", "Patrones de la comunidad", "share", "compartir")}
+        >
+          <div className="space-y-3">
+            {customPatterns.length > 0 && (
+              <div className="space-y-2">
+                {customPatterns.map((p) => (
+                  <div key={p.id} className="flex items-center justify-between rounded-lg border border-border-subtle px-3 py-2 text-sm">
+                    <div>
+                      <span className="font-medium">&ldquo;{p.phrase}&rdquo;</span>{" "}
+                      <span className="text-xs text-foreground-muted">
+                        ({categoryLabels[p.category][lang]} · {p.severity})
+                      </span>
+                    </div>
+                    <button onClick={() => removeCustomPattern(p.id)} className="text-xs text-trust-danger">
+                      {lang === "en" ? "Remove" : "Eliminar"}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto_auto] gap-2">
+              <input
+                value={newPatternPhrase}
+                onChange={(e) => setNewPatternPhrase(e.target.value)}
+                placeholder={lang === "en" ? "Phrase to watch for…" : "Frase a vigilar…"}
+                className="rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+              />
+              <select
+                value={newPatternCategory}
+                onChange={(e) => setNewPatternCategory(e.target.value as FlagCategory)}
+                className="rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+              >
+                {(Object.keys(categoryLabels) as FlagCategory[]).map((c) => (
+                  <option key={c} value={c}>
+                    {categoryLabels[c][lang]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={newPatternSeverity}
+                onChange={(e) => setNewPatternSeverity(e.target.value as Severity)}
+                className="rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-sm outline-none focus:border-accent"
+              >
+                <option value="low">{lang === "en" ? "Low" : "Baja"}</option>
+                <option value="medium">{lang === "en" ? "Medium" : "Media"}</option>
+                <option value="high">{lang === "en" ? "High" : "Alta"}</option>
+              </select>
+            </div>
+            <button
+              onClick={addCustomPattern}
+              className="btn-press w-full rounded-lg bg-accent-solid px-3 py-2 text-xs font-semibold text-white hover:bg-accent-solid-hover"
+            >
+              {lang === "en" ? "Add pattern" : "Añadir patrón"}
+            </button>
+            <div className="flex flex-wrap gap-2 pt-1">
+              <button
+                onClick={() => exportCustomPatterns(customPatterns)}
+                disabled={customPatterns.length === 0}
+                className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated disabled:opacity-40"
+              >
+                {lang === "en" ? "Export patterns" : "Exportar patrones"}
+              </button>
+              <button
+                onClick={() => patternImportInputRef.current?.click()}
+                className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
+              >
+                {lang === "en" ? "Import patterns" : "Importar patrones"}
+              </button>
+              <input
+                ref={patternImportInputRef}
+                type="file"
+                accept="application/json"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImportPatternsFile(file);
+                  e.target.value = "";
+                }}
+              />
+            </div>
+          </div>
         </Section>
 
         <Section

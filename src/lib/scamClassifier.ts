@@ -1,4 +1,4 @@
-import { FlagCategory, Language, RiskSpan, Severity } from "./types";
+import { CallLanguage, CustomPattern, FlagCategory, RiskSpan, Severity } from "./types";
 
 /**
  * Rolling scam-language classifier.
@@ -25,8 +25,19 @@ interface PatternDef {
   severity: Severity;
 }
 
-type PatternLibrary = Record<FlagCategory, Record<Language, PatternDef[]>>;
+type PatternLibrary = Record<FlagCategory, Partial<Record<CallLanguage, PatternDef[]>>>;
 
+/**
+ * Language coverage note: en/es have the deepest pattern sets since
+ * they're also the app's translated display languages. fr/zh/vi/tl
+ * cover the same five categories with real, native-phrased patterns
+ * for the tactics most common in scam calls targeting those language
+ * communities (e.g. the Mandarin "public security bureau / frozen
+ * account" impersonation scam), but are intentionally narrower — this
+ * build does not translate the rest of the UI into those languages,
+ * so results are only ever surfaced through the (English/Spanish)
+ * interface. See CallLanguage in types.ts.
+ */
 const patterns: Partial<PatternLibrary> = {
   urgency: {
     en: [
@@ -46,6 +57,27 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\binmediatamente\b/i, severity: "medium" },
       { pattern: /\bantes de que sea demasiado tarde\b/i, severity: "high" },
       { pattern: /\b(última|ultima) oportunidad\b/i, severity: "medium" },
+    ],
+    fr: [
+      { pattern: /\bagissez maintenant\b/i, severity: "high" },
+      { pattern: /\bimmédiatement\b/i, severity: "medium" },
+      { pattern: /\bavant qu'?il ne soit trop tard\b/i, severity: "high" },
+      { pattern: /\bdernière chance\b/i, severity: "medium" },
+    ],
+    zh: [
+      { pattern: /紧急/, severity: "medium" },
+      { pattern: /立即|马上/, severity: "medium" },
+      { pattern: /不然就太晚了/, severity: "high" },
+    ],
+    vi: [
+      { pattern: /\bhành động ngay\b/i, severity: "high" },
+      { pattern: /\bngay lập tức\b/i, severity: "medium" },
+      { pattern: /\btrước khi quá muộn\b/i, severity: "high" },
+    ],
+    tl: [
+      { pattern: /\bkumilos ka na ngayon\b/i, severity: "high" },
+      { pattern: /\bagad-agad\b/i, severity: "medium" },
+      { pattern: /\bbago pa huli ang lahat\b/i, severity: "high" },
     ],
   },
   "financial-request": {
@@ -68,6 +100,11 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bseed phrase\b/i, severity: "high" },
       { pattern: /\bremote access (to your computer|software|app)\b/i, severity: "high" },
       { pattern: /\b(anydesk|teamviewer|any desk|team viewer)\b/i, severity: "high" },
+      // UK-specific
+      { pattern: /\bnational insurance number\b/i, severity: "high" },
+      // India-specific
+      { pattern: /\baadhaar\b/i, severity: "high" },
+      { pattern: /\bkyc (update|verification)\b/i, severity: "medium" },
     ],
     es: [
       { pattern: /\btransferencia bancaria\b/i, severity: "high" },
@@ -80,6 +117,33 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\brecuperar (tus |mis )?(fondos|criptomonedas)\b/i, severity: "high" },
       { pattern: /\bacceso remoto a (tu|su) (computadora|equipo)\b/i, severity: "high" },
       { pattern: /\bfrase semilla\b/i, severity: "high" },
+    ],
+    fr: [
+      { pattern: /\bvirement bancaire\b/i, severity: "high" },
+      { pattern: /\bcarte(s)? cadeau\b/i, severity: "high" },
+      { pattern: /\bcrypto-?monnaie\b/i, severity: "high" },
+      { pattern: /\bnuméro de compte\b/i, severity: "high" },
+      { pattern: /\benvoyer de l'?argent\b/i, severity: "high" },
+      { pattern: /\baccès à distance à votre ordinateur\b/i, severity: "high" },
+    ],
+    zh: [
+      { pattern: /汇款|转账/, severity: "high" },
+      { pattern: /银行卡号|账户号码/, severity: "high" },
+      { pattern: /比特币|加密货币/, severity: "high" },
+      { pattern: /礼品卡/, severity: "high" },
+      { pattern: /远程(协助|控制)/, severity: "high" },
+    ],
+    vi: [
+      { pattern: /\bchuyển tiền\b/i, severity: "high" },
+      { pattern: /\bsố tài khoản ngân hàng\b/i, severity: "high" },
+      { pattern: /\bthẻ quà tặng\b/i, severity: "high" },
+      { pattern: /\btiền điện tử\b/i, severity: "high" },
+    ],
+    tl: [
+      { pattern: /\bpadalhan (mo )?ng pera\b/i, severity: "high" },
+      { pattern: /\bgift card\b/i, severity: "high" },
+      { pattern: /\baccount number\b/i, severity: "high" },
+      { pattern: /\bwire transfer\b/i, severity: "high" },
     ],
   },
   isolation: {
@@ -95,6 +159,24 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bmantenlo en secreto\b/i, severity: "high" },
       { pattern: /\bsolo entre (nosotros|tú y yo)\b/i, severity: "medium" },
       { pattern: /\bno cuelgues\b/i, severity: "medium" },
+    ],
+    fr: [
+      { pattern: /\bne le dis à personne\b/i, severity: "high" },
+      { pattern: /\bgarde(z)? (ça |cela )?secret\b/i, severity: "high" },
+      { pattern: /\bne raccrochez? pas\b/i, severity: "medium" },
+    ],
+    zh: [
+      { pattern: /不要告诉(任何人|别人|家人)/, severity: "high" },
+      { pattern: /保密/, severity: "high" },
+      { pattern: /先别挂电话/, severity: "medium" },
+    ],
+    vi: [
+      { pattern: /\bđừng nói với ai\b/i, severity: "high" },
+      { pattern: /\bgiữ bí mật\b/i, severity: "high" },
+    ],
+    tl: [
+      { pattern: /\bhuwag mong sabihin kahit kanino\b/i, severity: "high" },
+      { pattern: /\bpanatilihing lihim\b/i, severity: "high" },
     ],
   },
   "authority-impersonation": {
@@ -114,6 +196,14 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bvirus (detected|found) on your (computer|device)\b/i, severity: "high" },
       { pattern: /\byour (computer|account) (has been|is) compromised\b/i, severity: "high" },
       { pattern: /\btech support\b/i, severity: "medium" },
+      // UK-specific
+      { pattern: /\bhmrc\b/i, severity: "high" },
+      { pattern: /\btv licen[cs]e\b/i, severity: "medium" },
+      { pattern: /\bdvla\b/i, severity: "medium" },
+      // India-specific
+      { pattern: /\bdigital arrest\b/i, severity: "high" },
+      { pattern: /\bcyber crime cell\b/i, severity: "high" },
+      { pattern: /\btrai\b/i, severity: "medium" },
     ],
     es: [
       { pattern: /\bsoy del banco\b/i, severity: "high" },
@@ -124,6 +214,30 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bagente [a-z]+\b/i, severity: "low" },
       { pattern: /\bsoporte t(é|e)cnico\b/i, severity: "medium" },
       { pattern: /\bvirus (detectado|encontrado) en (tu|su) (computadora|dispositivo)\b/i, severity: "high" },
+    ],
+    fr: [
+      { pattern: /\bje suis (de|du) (la banque|votre banque)\b/i, severity: "high" },
+      { pattern: /\bmandat d'?arrêt\b/i, severity: "high" },
+      { pattern: /\bvous êtes en état d'?arrestation\b/i, severity: "high" },
+      { pattern: /\bsupport technique\b/i, severity: "medium" },
+      { pattern: /\bpolice\b/i, severity: "low" },
+    ],
+    zh: [
+      { pattern: /公安局?|警察/, severity: "medium" },
+      { pattern: /冻结(您的)?账户/, severity: "high" },
+      { pattern: /逮捕令/, severity: "high" },
+      { pattern: /涉嫌洗钱/, severity: "high" },
+      { pattern: /(微软|苹果|亚马逊)客服/, severity: "high" },
+    ],
+    vi: [
+      { pattern: /\bcông an\b/i, severity: "medium" },
+      { pattern: /\blệnh bắt giữ\b/i, severity: "high" },
+      { pattern: /\btôi là (từ|nhân viên) ngân hàng\b/i, severity: "high" },
+    ],
+    tl: [
+      { pattern: /\bito ay mula sa bangko\b/i, severity: "high" },
+      { pattern: /\bwarrant ng pag-?aresto\b/i, severity: "high" },
+      { pattern: /\bpulis\b/i, severity: "low" },
     ],
   },
   "emotional-manipulation": {
@@ -151,10 +265,31 @@ const patterns: Partial<PatternLibrary> = {
       { pattern: /\bnunca (me hab(í|i)a sentido as(í|i)|hab(í|i)a sentido esto)\b/i, severity: "medium" },
       { pattern: /\batrapad[oa] en el extranjero\b/i, severity: "high" },
     ],
+    fr: [
+      { pattern: /\bj'?ai (tellement )?peur\b/i, severity: "medium" },
+      { pattern: /\baide-?moi,? s'?il te plaît\b/i, severity: "medium" },
+      { pattern: /\bje suis (en prison|à l'?hôpital|dans le pétrin)\b/i, severity: "high" },
+      { pattern: /\bsi tu m'?aimes vraiment\b/i, severity: "high" },
+    ],
+    zh: [
+      { pattern: /我很害怕/, severity: "medium" },
+      { pattern: /请帮帮我/, severity: "medium" },
+      { pattern: /我在(监狱|医院|麻烦)/, severity: "high" },
+    ],
+    vi: [
+      { pattern: /\blàm ơn giúp tôi\b/i, severity: "medium" },
+      { pattern: /\btôi đang gặp rắc rối\b/i, severity: "high" },
+      { pattern: /\btôi rất sợ\b/i, severity: "medium" },
+    ],
+    tl: [
+      { pattern: /\bpakitulungan mo ako\b/i, severity: "medium" },
+      { pattern: /\bnasa gulo ako\b/i, severity: "high" },
+      { pattern: /\bkung mahal mo talaga ako\b/i, severity: "high" },
+    ],
   },
 };
 
-export function classifyText(text: string, lang: Language): CategoryMatch[] {
+export function classifyText(text: string, lang: CallLanguage, customPatterns: CustomPattern[] = []): CategoryMatch[] {
   const matches: CategoryMatch[] = [];
   (Object.keys(patterns) as FlagCategory[]).forEach((category) => {
     const defs = patterns[category]?.[lang] ?? [];
@@ -170,6 +305,18 @@ export function classifyText(text: string, lang: Language): CategoryMatch[] {
       }
     }
   });
+  // Community-imported patterns are plain phrases (not regex — imported
+  // from an untrusted file), so they're matched as a literal
+  // case-insensitive substring rather than compiled into a RegExp.
+  const lowerText = text.toLowerCase();
+  for (const custom of customPatterns) {
+    const phrase = custom.phrase.trim().toLowerCase();
+    if (!phrase) continue;
+    const index = lowerText.indexOf(phrase);
+    if (index !== -1) {
+      matches.push({ category: custom.category, severity: custom.severity, phrase: custom.phrase, index });
+    }
+  }
   return matches;
 }
 

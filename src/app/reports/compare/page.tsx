@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
 import { getReport } from "@/lib/storage";
+import { localeFor } from "@/lib/i18n";
 import { CallReport } from "@/lib/types";
 
 const bandColor = {
@@ -34,7 +35,7 @@ function ReportColumn({ report, lang }: { report: CallReport | undefined; lang: 
     <div className="rounded-2xl border border-border-subtle bg-background-card p-6">
       <div className="text-sm font-medium">{report.scenario}</div>
       <div className="mt-1 text-xs text-foreground-muted">
-        {new Date(report.startedAt).toLocaleString(lang === "en" ? "en-US" : "es-ES")}
+        {new Date(report.startedAt).toLocaleString(localeFor(lang))}
       </div>
       <div className="mt-4 text-3xl font-bold tabular-nums" style={{ color }}>
         {report.finalTrustScore}

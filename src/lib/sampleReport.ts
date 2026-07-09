@@ -60,5 +60,6 @@ export function buildSampleReport(lang: Language): CallReport {
     tags: [lang === "en" ? "sample" : "muestra"],
     notes: "",
     feedback: null,
+    callLanguage: lang,
   };
 }

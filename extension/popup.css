@@ -112,3 +112,49 @@ header {
   line-height: 1.5;
   color: #8d97b5;
 }
+
+.tap {
+  margin-top: 14px;
+  border-top: 1px solid #22304f;
+  padding-top: 12px;
+}
+
+.secondary {
+  width: 100%;
+  padding: 8px;
+  border: 1px solid #22304f;
+  border-radius: 999px;
+  background: transparent;
+  color: #e8ecf7;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary:hover {
+  background: #131d34;
+}
+
+.secondary:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.meter {
+  margin-top: 8px;
+  height: 6px;
+  border-radius: 999px;
+  background: #131d34;
+  overflow: hidden;
+}
+
+.meter__fill {
+  height: 100%;
+  width: 0%;
+  background: #4f8cff;
+  transition: width 80ms linear;
+}
+
+.tap .footnote {
+  margin-top: 8px;
+}

@@ -95,6 +95,32 @@ export function t(lang: Language) {
   return translations[lang];
 }
 
+/** Single source of truth for `Intl`/`toLocaleString` locale tags, so
+ * date and number formatting doesn't drift out of sync with the
+ * app-language ternaries scattered across pages. */
+const localeTags: Record<Language, string> = {
+  en: "en-US",
+  es: "es-ES",
+};
+
+export function localeFor(lang: Language): string {
+  return localeTags[lang];
+}
+
+/** Text direction for the current display language. All languages this
+ * build ships a translated UI for (en/es) are left-to-right, but this
+ * is real plumbing — layout.tsx and SettingsContext both read it — so
+ * adding a right-to-left language later (Arabic, Hebrew, Urdu) means
+ * changing this one map, not hunting down hardcoded "ltr" strings. */
+const directions: Record<Language, "ltr" | "rtl"> = {
+  en: "ltr",
+  es: "ltr",
+};
+
+export function dirFor(lang: Language): "ltr" | "rtl" {
+  return directions[lang];
+}
+
 export const categoryLabels: Record<
   string,
   { en: string; es: string; description: { en: string; es: string } }

@@ -24,9 +24,12 @@ import {
   pickBreakTheSpellSuggestion,
 } from "@/lib/fusionEngine";
 import { demoScenarios } from "@/lib/demoScenarios";
-import { saveReport } from "@/lib/storage";
+import { loadCustomPatterns, saveReport } from "@/lib/storage";
+import { showDangerNotification } from "@/lib/notifications";
 import {
+  CallLanguage,
   CallReport,
+  CustomPattern,
   RiskFlag,
   TranscriptEntry,
   TrustSnapshot,
@@ -124,6 +127,7 @@ export default function DashboardPage() {
   const pauseStartRef = useRef(0);
   const wakeLockRef = useRef<{ release: () => Promise<void> } | null>(null);
   const familyAlertShownRef = useRef(false);
+  const desktopNotifiedRef = useRef(false);
 
   const sessionRef = useRef<SessionData>(emptySession("idle", demoScenarios[0].id));
   const startTimeRef = useRef(0);
@@ -136,6 +140,11 @@ export default function DashboardPage() {
   const interimEntryIdRef = useRef<string | null>(null);
   const timeoutsRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const tickerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const customPatternsRef = useRef<CustomPattern[]>([]);
+
+  useEffect(() => {
+    customPatternsRef.current = loadCustomPatterns();
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -239,6 +248,7 @@ export default function DashboardPage() {
     setSafeWordModalOpen(false);
     setFamilyAlertVisible(false);
     familyAlertShownRef.current = false;
+    desktopNotifiedRef.current = false;
     voiceAuthRef.current = 0;
     transcriptRiskRef.current = 0;
     recentMatchesRef.current = [];
@@ -289,6 +299,15 @@ export default function DashboardPage() {
         setFamilyAlertVisible(true);
         setTimeout(() => setFamilyAlertVisible(false), 6000);
       }
+      if (settings.desktopNotifications && !desktopNotifiedRef.current) {
+        desktopNotifiedRef.current = true;
+        showDangerNotification(
+          lang === "en" ? "Guardian Line — high risk detected" : "Guardian Line — riesgo alto detectado",
+          lang === "en"
+            ? "This call just crossed into the danger zone. Switch back to Guardian Line."
+            : "Esta llamada acaba de entrar en la zona de peligro. Vuelve a Guardian Line."
+        );
+      }
     }
 
     if (settings.calmVoiceGuidance && newSnapshot.band !== sessionRef.current.lastAnnouncedBand) {
@@ -297,8 +316,8 @@ export default function DashboardPage() {
     }
   }
 
-  function classifyAndFlag(text: string, timestampMs: number): CategoryMatch[] {
-    const matches = classifyText(text, lang);
+  function classifyAndFlag(text: string, timestampMs: number, classifyLang: CallLanguage): CategoryMatch[] {
+    const matches = classifyText(text, classifyLang, customPatternsRef.current);
     matches.forEach((m) => recentMatchesRef.current.push({ match: m, atMs: timestampMs }));
     recentMatchesRef.current = recentMatchesRef.current.filter((r) => timestampMs - r.atMs < 45000);
     transcriptRiskRef.current = scoreTranscriptRisk(recentMatchesRef.current.map((r) => r.match));
@@ -378,7 +397,7 @@ export default function DashboardPage() {
           return;
         }
 
-        const matches = classifyAndFlag(text, timestampMs);
+        const matches = classifyAndFlag(text, timestampMs, settings.callLanguage);
         const id = interimEntryIdRef.current ?? newId("t");
         interimEntryIdRef.current = null;
         const idx = list.findIndex((e) => e.id === id);
@@ -427,7 +446,7 @@ export default function DashboardPage() {
           window.speechSynthesis.speak(utter);
         }
 
-        const matches = classifyAndFlag(text, line.atMs);
+        const matches = classifyAndFlag(text, line.atMs, lang);
 
         setTranscriptEntries([
           ...sessionRef.current.transcript,
@@ -499,6 +518,7 @@ export default function DashboardPage() {
       tags: [],
       notes: "",
       feedback: null,
+      callLanguage: session.mode === "scripted" ? lang : settings.callLanguage,
     };
     saveReport(report);
     setMode("idle");

@@ -52,3 +52,47 @@ chrome.windows.onFocusChanged.addListener(async (windowId) => {
   const [tab] = await chrome.tabs.query({ active: true, windowId });
   refreshBadgeForTab(tab);
 });
+
+// ---- Real tab-audio tap (Chrome/Edge only — offscreen documents are a
+// Chromium-only API, so Firefox falls back to the badge-detection
+// feature above only; see extension/README.md). ----
+
+const OFFSCREEN_URL = "offscreen.html";
+
+async function ensureOffscreenDocument() {
+  const existing = await chrome.runtime.getContexts?.({
+    contextTypes: ["OFFSCREEN_DOCUMENT"],
+    documentUrls: [chrome.runtime.getURL(OFFSCREEN_URL)],
+  });
+  if (existing && existing.length > 0) return;
+  await chrome.offscreen.createDocument({
+    url: OFFSCREEN_URL,
+    reasons: ["USER_MEDIA"],
+    justification: "Reads a live audio level from the active call tab for the popup's meter.",
+  });
+}
+
+chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
+  if (message?.type === "guardianline-request-tap") {
+    (async () => {
+      try {
+        const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+        if (!tab?.id) return sendResponse({ ok: false, error: "No active tab" });
+        const streamId = await chrome.tabCapture.getMediaStreamId({ targetTabId: tab.id });
+        await ensureOffscreenDocument();
+        const res = await chrome.runtime.sendMessage({ type: "guardianline-start-tap", streamId });
+        sendResponse(res);
+      } catch (err) {
+        sendResponse({ ok: false, error: String(err) });
+      }
+    })();
+    return true;
+  }
+  if (message?.type === "guardianline-request-stop-tap") {
+    chrome.runtime.sendMessage({ type: "guardianline-stop-tap" }).catch(() => {});
+    chrome.offscreen.hasDocument?.().then((has) => {
+      if (has) chrome.offscreen.closeDocument();
+    });
+    sendResponse({ ok: true });
+  }
+});

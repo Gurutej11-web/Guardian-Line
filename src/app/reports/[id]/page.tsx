@@ -8,7 +8,7 @@ import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
 import { getReport, updateReport } from "@/lib/storage";
 import { CallReport } from "@/lib/types";
-import { categoryLabels } from "@/lib/i18n";
+import { categoryLabels, localeFor } from "@/lib/i18n";
 import { TranscriptView } from "@/components/TranscriptView";
 import { ExplainabilityPanel } from "@/components/ExplainabilityPanel";
 import { CheckIcon, KeyIcon } from "@/components/icons";
@@ -180,6 +180,22 @@ function ReportBody({
     updateReport(report.id, { notes: value });
   }
 
+  const [feedback, setFeedback] = useState(report.feedback);
+  function giveFeedback(value: "helpful" | "not-helpful") {
+    const next = feedback === value ? null : value;
+    setFeedback(next);
+    updateReport(report.id, { feedback: next });
+    showToast(
+      next
+        ? lang === "en"
+          ? "Thanks — this helps tune future sensitivity"
+          : "Gracias — esto ayuda a ajustar la sensibilidad"
+        : lang === "en"
+        ? "Feedback removed"
+        : "Comentario eliminado"
+    );
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10 print:max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -187,7 +203,7 @@ function ReportBody({
           <div className="text-xs uppercase tracking-wide text-foreground-muted">{strings.report.title}</div>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{report.scenario}</h1>
           <div className="mt-1 text-sm text-foreground-muted">
-            {new Date(report.startedAt).toLocaleString(lang === "en" ? "en-US" : "es-ES")} ·{" "}
+            {new Date(report.startedAt).toLocaleString(localeFor(lang))} ·{" "}
             {Math.round(report.durationMs / 1000)}s
           </div>
         </div>
@@ -317,6 +333,35 @@ function ReportBody({
               rows={2}
               className="w-full rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-xs outline-none focus:border-accent"
             />
+          </div>
+          <div>
+            <div className="mb-2 text-xs font-semibold text-foreground-muted">
+              {lang === "en" ? "Was this assessment helpful?" : "¿Fue útil esta evaluación?"}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => giveFeedback("helpful")}
+                aria-pressed={feedback === "helpful"}
+                className={`btn-press rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  feedback === "helpful"
+                    ? "border-trust-safe bg-trust-safe/15 text-trust-safe"
+                    : "border-border-subtle hover:bg-background-elevated"
+                }`}
+              >
+                👍 {lang === "en" ? "Helpful" : "Útil"}
+              </button>
+              <button
+                onClick={() => giveFeedback("not-helpful")}
+                aria-pressed={feedback === "not-helpful"}
+                className={`btn-press rounded-full border px-3 py-1.5 text-xs font-medium ${
+                  feedback === "not-helpful"
+                    ? "border-trust-danger bg-trust-danger/15 text-trust-danger"
+                    : "border-border-subtle hover:bg-background-elevated"
+                }`}
+              >
+                👎 {lang === "en" ? "Not helpful" : "No útil"}
+              </button>
+            </div>
           </div>
         </div>
         {qrDataUrl && (

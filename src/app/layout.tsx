@@ -9,6 +9,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
 import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 import { ChangelogGate } from "@/components/ChangelogGate";
+import { InstallPrompt } from "@/components/InstallPrompt";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -54,6 +55,7 @@ export default function RootLayout({
             <ScrollToTop />
             <ServiceWorkerRegistration />
             <ChangelogGate />
+            <InstallPrompt />
           </ToastProvider>
         </SettingsProvider>
       </body>

@@ -1,5 +1,12 @@
 export type Language = "en" | "es";
 
+/** Language the *caller* is speaking, used only to select scam-phrase
+ * patterns for the transcript classifier. Deliberately separate from
+ * `Language` (the app's own display language) — a French- or
+ * Vietnamese-speaking caller can be scored while the app UI stays in
+ * English or Spanish, since only the interface has been translated. */
+export type CallLanguage = "en" | "es" | "fr" | "zh" | "vi" | "tl";
+
 export type Speaker = "caller" | "you";
 
 export type FlagCategory =
@@ -84,6 +91,7 @@ export interface CallReport {
   tags: string[];
   notes: string;
   feedback: "helpful" | "not-helpful" | null;
+  callLanguage: CallLanguage;
 }
 
 export interface FamilyContact {
@@ -109,8 +117,24 @@ export interface VoiceBaseline {
   capturedAt: string;
 }
 
+/** A user-contributed scam phrase, shared and imported entirely as a
+ * local JSON file — there's no server, so "community sharing" here
+ * means exporting a file and sending it to someone else however you'd
+ * like (email, USB drive, a shared folder). Deliberately holds only a
+ * category/phrase/severity: no names, timestamps, or transcripts, so
+ * exporting one never leaks anything about the call it came from. */
+export interface CustomPattern {
+  id: string;
+  category: FlagCategory;
+  phrase: string;
+  severity: Severity;
+}
+
 export interface AppSettings {
   language: Language;
+  /** Language the app listens for scam phrases in during a live call —
+   * independent of `language` (the interface's own display language). */
+  callLanguage: CallLanguage;
   sensitivity: number; // 0-100, higher = more sensitive (flags earlier)
   privacyMode: boolean; // on-device only, never "transmit" anonymized scores
   calmVoiceGuidance: boolean;
@@ -131,4 +155,5 @@ export interface AppSettings {
   llmEndpoint: string;
   hasSeenOnboarding: boolean;
   sensitivityNudge: number;
+  desktopNotifications: boolean;
 }

@@ -3,7 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { AppSettings } from "@/lib/types";
 import { defaultSettings, loadSettings, saveSettings } from "@/lib/storage";
-import { t } from "@/lib/i18n";
+import { t, dirFor } from "@/lib/i18n";
 
 interface SettingsContextValue {
   settings: AppSettings;
@@ -30,6 +30,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (hydrated) saveSettings(settings);
   }, [settings, hydrated]);
+
+  useEffect(() => {
+    document.documentElement.lang = settings.language;
+    document.documentElement.dir = dirFor(settings.language);
+  }, [settings.language]);
 
   useEffect(() => {
     document.body.classList.toggle("high-contrast", settings.highContrast);

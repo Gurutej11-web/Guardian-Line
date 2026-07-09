@@ -34,6 +34,33 @@ describe("classifyText", () => {
       isolation!.phrase.toLowerCase()
     );
   });
+
+  it("flags a French urgency phrase for the fr call language", () => {
+    const matches = classifyText("Agissez maintenant, s'il vous plaît", "fr");
+    expect(matches.map((m) => m.category)).toContain("urgency");
+  });
+
+  it("flags a Mandarin authority-impersonation phrase for the zh call language", () => {
+    const matches = classifyText("我是公安局的，您的账户涉嫌洗钱", "zh");
+    expect(matches.map((m) => m.category)).toContain("authority-impersonation");
+  });
+
+  it("matches a user-imported community pattern as a literal substring", () => {
+    const matches = classifyText(
+      "Okay, just send me a prepaid card and we're done",
+      "en",
+      [{ id: "p1", category: "financial-request", phrase: "send me a prepaid card", severity: "high" }]
+    );
+    expect(matches).toHaveLength(1);
+    expect(matches[0]).toMatchObject({ category: "financial-request", severity: "high", phrase: "send me a prepaid card" });
+  });
+
+  it("does not match a community pattern that isn't present in the text", () => {
+    const matches = classifyText("Are you still coming for dinner?", "en", [
+      { id: "p1", category: "financial-request", phrase: "send me a prepaid card", severity: "high" },
+    ]);
+    expect(matches).toHaveLength(0);
+  });
 });
 
 describe("toRiskSpans", () => {

@@ -39,6 +39,20 @@ const faqs = [
       es: "No — es un tono de prueba generado que muestra las características acústicas del habla sintética, no una clonación de la voz de una persona real.",
     },
   },
+  {
+    q: { en: "Is there an iPhone or Android app?", es: "¿Hay una app para iPhone o Android?" },
+    a: {
+      en: "Not a native app — but Guardian Line is a installable web app (PWA): open it in Safari or Chrome on your phone and choose \"Add to Home Screen\" (a banner offers this automatically where supported). To jump straight to the Live Monitor with one tap, create a Siri Shortcut (Shortcuts app → + → \"Open App\" → Guardian Line, or \"Open URL\" pointed at /dashboard) or an Android home-screen shortcut the same way.",
+      es: "No es una app nativa — pero Guardian Line es una app web instalable (PWA): ábrela en Safari o Chrome en tu teléfono y elige \"Agregar a pantalla de inicio\".",
+    },
+  },
+  {
+    q: { en: "Can I embed Guardian Line in another site?", es: "¿Puedo incrustar Guardian Line en otro sitio?" },
+    a: {
+      en: "Yes — add ?embed=1 to any URL (e.g. /dashboard?embed=1) and the header/footer chrome is hidden, so it drops cleanly into an iframe on a partner site or a bank's fraud-education page.",
+      es: "Sí — agrega ?embed=1 a cualquier URL (por ejemplo /dashboard?embed=1) y se oculta el encabezado/pie de página, para que se incruste bien en un iframe.",
+    },
+  },
 ];
 
 export default function FaqPage() {

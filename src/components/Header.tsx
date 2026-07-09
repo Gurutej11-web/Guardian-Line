@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useSettings } from "@/context/SettingsContext";
+import { useEmbedMode } from "@/lib/embed";
 import { ShieldIcon } from "./icons";
 
 export function Header() {
   const { settings, updateSettings, strings } = useSettings();
   const pathname = usePathname();
+  const embed = useEmbedMode();
+
+  if (embed) return null;
 
   const navItems = [
     { href: "/", label: strings.nav.home },

@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
-import { deleteReports, loadReports, saveReport } from "@/lib/storage";
+import { computeLocalStats, deleteReports, loadReports, saveReport } from "@/lib/storage";
+import { localeFor } from "@/lib/i18n";
 import { CallReport, TrustBand } from "@/lib/types";
 import { buildSampleReport } from "@/lib/sampleReport";
 import { ChevronRightIcon } from "@/components/icons";
@@ -43,6 +44,29 @@ function TrendChart({ reports, lang }: { reports: CallReport[]; lang: "en" | "es
       <svg viewBox={`0 0 ${width} ${height}`} className="mt-2 h-12 w-full" preserveAspectRatio="none">
         <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2} />
       </svg>
+    </div>
+  );
+}
+
+function StatsCard({ reports, lang }: { reports: CallReport[]; lang: "en" | "es" }) {
+  const stats = computeLocalStats(reports);
+  const items: { label: string; value: string | number }[] = [
+    { label: lang === "en" ? "Calls monitored" : "Llamadas monitoreadas", value: stats.totalCalls },
+    { label: lang === "en" ? "High-risk calls" : "Llamadas de alto riesgo", value: stats.dangerCalls },
+    {
+      label: lang === "en" ? "Safe word passes" : "Palabras seguras superadas",
+      value: `${stats.safeWordPasses}/${stats.safeWordChallenges}`,
+    },
+    { label: lang === "en" ? "Avg. trust score" : "Puntuación promedio", value: stats.averageTrustScore },
+  ];
+  return (
+    <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      {items.map((item) => (
+        <div key={item.label} className="card-hover rounded-2xl border border-border-subtle bg-background-card p-4 text-center">
+          <div className="text-xl font-semibold tabular-nums">{item.value}</div>
+          <div className="mt-1 text-[11px] leading-tight text-foreground-muted">{item.label}</div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -123,7 +147,17 @@ export default function ReportsPage() {
           : "Los resúmenes de llamadas se guardan solo en este dispositivo."}
       </p>
 
-      {loaded && reports.length > 0 && <div className="mt-6"><TrendChart reports={reports} lang={lang} /></div>}
+      {loaded && reports.length > 0 && (
+        <div className="mt-6">
+          <StatsCard reports={reports} lang={lang} />
+          <p className="mb-4 text-center text-[11px] text-foreground-muted">
+            {lang === "en"
+              ? "Computed from this device's reports only — nothing here is ever sent anywhere."
+              : "Calculado solo con los informes de este dispositivo — nada de esto se envía a ningún lugar."}
+          </p>
+          <TrendChart reports={reports} lang={lang} />
+        </div>
+      )}
 
       {loaded && reports.length > 0 && (
         <div className="flex flex-col sm:flex-row gap-2">
@@ -233,7 +267,7 @@ export default function ReportsPage() {
                   <div>
                     <div className="font-medium">{r.scenario}</div>
                     <div className="mt-1 text-xs text-foreground-muted">
-                      {new Date(r.startedAt).toLocaleString(lang === "en" ? "en-US" : "es-ES")} ·{" "}
+                      {new Date(r.startedAt).toLocaleString(localeFor(lang))} ·{" "}
                       {Math.round(r.durationMs / 1000)}s
                       {r.tags.length > 0 && ` · ${r.tags.join(", ")}`}
                     </div>

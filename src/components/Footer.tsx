@@ -2,10 +2,14 @@
 
 import Link from "next/link";
 import { useSettings } from "@/context/SettingsContext";
+import { useEmbedMode } from "@/lib/embed";
 
 export function Footer() {
   const { settings } = useSettings();
   const lang = settings.language;
+  const embed = useEmbedMode();
+
+  if (embed) return null;
 
   const links = [
     { href: "/about", label: lang === "en" ? "About" : "Acerca de" },
