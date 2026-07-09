@@ -46,12 +46,26 @@ export function saveSettings(settings: AppSettings) {
   window.localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
 }
 
+/** Backfills fields added to CallReport after some reports were already
+ * saved (tags/notes/feedback landed after the first shipped version) so
+ * older localStorage data doesn't crash reads like `r.tags.some(...)`. */
+function migrateReport(r: Partial<CallReport> & Pick<CallReport, "id">): CallReport {
+  return {
+    tags: [],
+    notes: "",
+    feedback: null,
+    ...r,
+  } as CallReport;
+}
+
 export function loadReports(): CallReport[] {
   if (!isBrowser()) return [];
   try {
     const raw = window.localStorage.getItem(REPORTS_KEY);
     if (!raw) return [];
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(migrateReport);
   } catch {
     return [];
   }

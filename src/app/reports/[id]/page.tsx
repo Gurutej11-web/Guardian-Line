@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import QRCode from "qrcode";
 import { useSettings } from "@/context/SettingsContext";
 import { useToast } from "@/context/ToastContext";
-import { getReport } from "@/lib/storage";
+import { getReport, updateReport } from "@/lib/storage";
 import { CallReport } from "@/lib/types";
 import { categoryLabels } from "@/lib/i18n";
 import { TranscriptView } from "@/components/TranscriptView";
@@ -147,6 +148,38 @@ function ReportBody({
     el.style.strokeDashoffset = "0";
   }, [trustValues.length]);
 
+  const [tags, setTags] = useState(report.tags);
+  const [tagInput, setTagInput] = useState("");
+  const [notes, setNotes] = useState(report.notes);
+  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const shortSummary = `Guardian Line — ${report.scenario} — ${bandLabel[lang][report.finalBand]} (${report.finalTrustScore}/100) — ${new Date(report.startedAt).toLocaleDateString()}`;
+    QRCode.toDataURL(shortSummary, { width: 160, margin: 1, color: { dark: "#0a0e1a", light: "#ffffff" } })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(null));
+  }, [report, lang]);
+
+  function addTag() {
+    const t = tagInput.trim();
+    if (!t || tags.includes(t)) return;
+    const next = [...tags, t];
+    setTags(next);
+    updateReport(report.id, { tags: next });
+    setTagInput("");
+  }
+
+  function removeTag(t: string) {
+    const next = tags.filter((x) => x !== t);
+    setTags(next);
+    updateReport(report.id, { tags: next });
+  }
+
+  function saveNotes(value: string) {
+    setNotes(value);
+    updateReport(report.id, { notes: value });
+  }
+
   return (
     <div className="mx-auto w-full max-w-4xl flex-1 px-5 py-10 print:max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -178,6 +211,23 @@ function ReportBody({
           >
             {strings.report.export}
           </button>
+          {typeof navigator !== "undefined" && "share" in navigator && (
+            <button
+              onClick={async () => {
+                try {
+                  await navigator.share({
+                    title: lang === "en" ? "Guardian Line call summary" : "Resumen de llamada de Guardian Line",
+                    text: buildFtcStyleReport(report, lang),
+                  });
+                } catch {
+                  // user cancelled the native share sheet — nothing to do
+                }
+              }}
+              className="btn-press rounded-full border border-border-strong px-4 py-2 text-xs font-medium hover:bg-background-elevated"
+            >
+              {lang === "en" ? "Share…" : "Compartir…"}
+            </button>
+          )}
           <button
             onClick={() => {
               downloadFile(`guardian-line-report-${report.id}.txt`, buildFtcStyleReport(report, lang));
@@ -234,6 +284,50 @@ function ReportBody({
             </div>
           )}
         </div>
+      </div>
+
+      <div className="card-hover animate-fade-in-up mt-6 grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-6 rounded-2xl border border-border-subtle bg-background-card p-6 print:hidden">
+        <div className="space-y-4">
+          <div>
+            <div className="mb-2 text-xs font-semibold text-foreground-muted">{lang === "en" ? "Tags" : "Etiquetas"}</div>
+            <div className="flex flex-wrap items-center gap-2">
+              {tags.map((t) => (
+                <span key={t} className="flex items-center gap-1 rounded-full bg-background-elevated px-2.5 py-1 text-xs">
+                  {t}
+                  <button onClick={() => removeTag(t)} className="text-foreground-muted hover:text-trust-danger">
+                    ×
+                  </button>
+                </span>
+              ))}
+              <input
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && addTag()}
+                placeholder={lang === "en" ? "Add a tag…" : "Añadir etiqueta…"}
+                className="w-32 rounded-full border border-border-subtle bg-background-elevated px-2.5 py-1 text-xs outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+          <div>
+            <div className="mb-2 text-xs font-semibold text-foreground-muted">{lang === "en" ? "Notes" : "Notas"}</div>
+            <textarea
+              value={notes}
+              onChange={(e) => saveNotes(e.target.value)}
+              placeholder={lang === "en" ? "Any context worth remembering about this call…" : "Cualquier contexto que valga la pena recordar…"}
+              rows={2}
+              className="w-full rounded-lg border border-border-subtle bg-background-elevated px-3 py-2 text-xs outline-none focus:border-accent"
+            />
+          </div>
+        </div>
+        {qrDataUrl && (
+          <div className="flex flex-col items-center justify-center gap-1">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src={qrDataUrl} alt="QR code summary" className="rounded-lg" width={110} height={110} />
+            <span className="text-center text-[10px] text-foreground-muted">
+              {lang === "en" ? "Scan for a short summary" : "Escanea para un resumen breve"}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-5">
