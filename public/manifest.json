@@ -1,0 +1,17 @@
+{
+  "name": "Guardian Line",
+  "short_name": "Guardian Line",
+  "description": "Real-time voice-clone & scam call detection.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0e1a",
+  "theme_color": "#0a0e1a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

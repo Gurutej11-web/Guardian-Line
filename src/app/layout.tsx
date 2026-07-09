@@ -6,6 +6,7 @@ import { ToastProvider } from "@/context/ToastContext";
 import { Header } from "@/components/Header";
 import { PageTransition } from "@/components/PageTransition";
 import { ScrollToTop } from "@/components/ScrollToTop";
+import { ServiceWorkerRegistration } from "@/components/ServiceWorkerRegistration";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -21,6 +22,7 @@ export const metadata: Metadata = {
   title: "Guardian Line — Real-Time Voice-Clone & Scam Call Detection",
   description:
     "Guardian Line listens alongside your calls in real time and warns you the moment a voice sounds cloned or a conversation turns into a scam — before you send the money.",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({
@@ -53,6 +55,7 @@ export default function RootLayout({
               </div>
             </footer>
             <ScrollToTop />
+            <ServiceWorkerRegistration />
           </ToastProvider>
         </SettingsProvider>
       </body>
